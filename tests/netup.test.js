@@ -142,14 +142,14 @@ describe('tradup', function () {
             })
         });
 
-        describe('aaaaa', function () {
+        /*describe('aaaaa', function () {
             it('开发人员可以通过设置资源注册器加载资源', function (done) {
                 var restDir = path.join(__dirname, './data/rests');
                 var resourceRegistry = require('../netup/rests/ResourcesRestry')(restDir);
                 appBuilder.setRests(resourceRegistry).end();
                 //runAndCheckServer(port, 'http://localhost:' + port + '/rests/foo', done);
             });
-        });
+        });*/
 
 
         describe('based on express', function () {
