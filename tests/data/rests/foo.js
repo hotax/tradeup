@@ -5,7 +5,7 @@ module.exports = {
     url: '/rests/foo',
     rest: [
         {
-            method: 'gEt',
+            method: 'Get',
             handler: function (req, res) {
                 res.status(200);
                 res.json({name: 'foo'});
