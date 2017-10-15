@@ -8,8 +8,8 @@ module.exports = {
         var resource = {
             attachTo: function (router) {
                 desc.rest.forEach(function (s) {
-                    router.get(desc.url, s.handler)
-                })
+                    router[s.method.toLowerCase()](desc.url, s.handler)
+                });
             }
         }
         return resource;
