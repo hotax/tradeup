@@ -155,6 +155,85 @@ describe('tradup', function () {
 
 
         describe('基于express实现', function () {
+            describe('开发人员可以加载handlebars View engine', function () {
+                var viewsDir, viewEngineName, viewEngine, expressApp, appMock;
+                var handlebarsEngineCreatorStub;
+                var viewsEngineFactory;
+
+                beforeEach(function () {
+                    viewsDir = '/views/dir';
+                    viewEngineName = 'foo-engine';
+                    viewEngine = new Object();
+                    expressApp = require('express')();
+                    appMock = sinon.mock(expressApp);
+                    appMock.expects('set').withExactArgs('views', viewsDir).once();
+                    appMock.expects('engine').withExactArgs(viewEngineName, viewEngine).once();
+                    appMock.expects('set').withExactArgs('view engine', viewEngineName).once();
+
+                    handlebarsEngineCreatorStub = sinon.stub();
+                });
+
+                it('缺省配置', function () {
+                    handlebarsEngineCreatorStub
+                        .withArgs({
+                            partialsDir: viewsDir + '/partials',
+                            extname: '.' + viewEngineName
+                        })
+                        .returns({engine: viewEngine});
+                    stubs['express-handlebars'] = {create: handlebarsEngineCreatorStub};
+
+                    viewsEngineFactory = proxyquire('../netup/express/HandlebarsFactory', stubs)(viewEngineName, viewsDir);
+                    viewsEngineFactory.attachTo(expressApp);
+                    appMock.verify();
+                });
+
+                it('设置view partials目录', function () {
+                    var partialsDir = '/partials/dir';
+                    handlebarsEngineCreatorStub.withArgs({
+                        partialsDir: partialsDir,
+                        extname: '.' + viewEngineName
+                    }).returns({engine: viewEngine});
+                    stubs['express-handlebars'] = {create: handlebarsEngineCreatorStub};
+
+                    viewsEngineFactory = proxyquire('../netup/express/HandlebarsFactory', stubs)(viewEngineName, viewsDir, {
+                        partialsDir: partialsDir
+                    });
+                    viewsEngineFactory.attachTo(expressApp);
+                    appMock.verify();
+                });
+
+                it('设置view文件扩展名', function () {
+                    var extname = '.handlebars';
+                    handlebarsEngineCreatorStub.withArgs({
+                        partialsDir: viewsDir + '/partials',
+                        extname: extname
+                    }).returns({engine: viewEngine});
+                    stubs['express-handlebars'] = {create: handlebarsEngineCreatorStub};
+
+                    viewsEngineFactory = proxyquire('../netup/express/HandlebarsFactory', stubs)(viewEngineName, viewsDir, {
+                        extname: extname
+                    });
+                    viewsEngineFactory.attachTo(expressApp);
+                    appMock.verify();
+                });
+
+                it('设置helpers', function () {
+                    var helpers = new Object();
+                    handlebarsEngineCreatorStub.withArgs({
+                        partialsDir: viewsDir + '/partials',
+                        extname: '.' + viewEngineName,
+                        helpers: helpers
+                    }).returns({engine: viewEngine});
+                    stubs['express-handlebars'] = {create: handlebarsEngineCreatorStub};
+
+                    viewsEngineFactory = proxyquire('../netup/express/HandlebarsFactory', stubs)(viewEngineName, viewsDir, {
+                        helpers: helpers
+                    });
+                    viewsEngineFactory.attachTo(expressApp);
+                    appMock.verify();
+                });
+            });
+
             describe('AppBuilder', function () {
                 var appBaseDir, appBuilder;
 
@@ -170,6 +249,14 @@ describe('tradup', function () {
                         .end();
                     var request = requestAgent(app);
                     request.get('/app/staticResource.json').expect(200, {name: 'foo'}, done);
+                });
+
+                it('开发人员可以加载handlebars View engine', function () {
+                    var loadSpy = sinon.spy();
+                    var app = appBuilder
+                        .setViewEngine({attachTo: loadSpy})
+                        .end();
+                    expect(loadSpy).calledWith(app).calledOnce;
                 });
 
                 it('开发人员可以加载Rest服务', function () {

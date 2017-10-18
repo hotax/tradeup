@@ -17,11 +17,15 @@ var logger = log4js.getLogger();
 
 module.exports.begin = function (base) {
     var baseDir = base || __dirname;
-    var restsRegistry = null;
+    var restsRegistry, viewEngine;
 
     initappobject();
     this.setWebRoot = function (root, dir) {
         app.use(root, express.static(path.join(baseDir, dir)));
+        return this;
+    };
+    this.setViewEngine = function (engine) {
+        restsRegistry = engine;
         return this;
     };
     this.setRests = function (rests) {
@@ -29,6 +33,7 @@ module.exports.begin = function (base) {
         return this;
     };
     this.end = function () {
+        if(viewEngine) viewEngine.attachTo(app);
         if(restsRegistry) restsRegistry.attachTo(app);
         return app;
     };

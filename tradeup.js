@@ -14,7 +14,27 @@ var logger = log4js.getLogger();
 module.exports = function () {
     const defaultPort = 33579;
 
-    appBuilder.begin(__dirname)
+    //配置view engine
+    const moment = require('moment');
+    var viewEngineFactory = require('./netup/express/HandlebarsFactory')(
+        //按缺省规约：
+        // partials目录为path.join(__dirname, './client/views') + '/partials'
+        // views文件扩展名为'.hbs'
+        'hbs', path.join(__dirname, './client/views'),
+        {
+            helpers: {
+                dateMMDD: function (timestamp) {
+                    return moment(timestamp).format('MM-DD');
+                },
+                dateYYYYMMDD: function (timestamp) {
+                    return moment(timestamp).format('YYYY-MM-DD');
+                }
+            }
+        });
+
+    appBuilder
+        .begin(__dirname)
+        .setViewEngine(viewEngineFactory)
         .setRests(restRegistry)
         .setWebRoot('/website', './client/public')
         .end();
