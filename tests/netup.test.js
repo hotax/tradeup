@@ -2,7 +2,10 @@
  * Created by clx on 2017/10/9.
  */
 var proxyquire = require('proxyquire'),
-    path = require('path');
+    path = require('path'),
+    mongoose = require('mongoose'),
+    Schema = mongoose.Schema,
+    ObjectId = Schema.Types.ObjectId;
 
 describe('tradup', function () {
     var stubs, err;
@@ -29,7 +32,38 @@ describe('tradup', function () {
             describe('可搜索的产品列表', function () {
                 it('最新产品列表', function (done) {
                     var result = {
-                        products: ['foo', 'fee', 'fuu'],
+                        data: [
+                            {
+                                _id: 'foo',
+                                code: '210001',
+                                grey: {
+                                    yarn: { //纱支
+                                        warp: {val: [100]},    //径向
+                                        weft: {val: [200, 300], unit: 'ss'}     //weixiang
+                                    },
+                                    dnsty: {
+                                        warp: {val: [50]},
+                                        weft: {val: [60, 80, 100]}
+                                    }
+                                },
+                                desc: 'the description of foo'
+                            },
+                            {
+                                _id: 'fee',
+                                code: '210020',
+                                grey: {
+                                    yarn: { //纱支
+                                        warp: {val: [90]},    //径向
+                                        weft: {val: [210, 310], unit: 'pp'}     //weixiang
+                                    },
+                                    dnsty: {
+                                        warp: {val: [58]},
+                                        weft: {val: [65, 85, 110]}
+                                    }
+                                },
+                                desc: 'the description of fee'
+                            }
+                        ],
                         partial: {
                             start: 0,
                             count: 3,
@@ -123,6 +157,14 @@ describe('tradup', function () {
                 var registry;
 
                 beforeEach(function () {
+                    registry = require('../netup/rests/ResourcesRestry');
+                });
+
+                it('确保Rests服务管理器是单例', function () {
+                    registry.create('foo/dir');
+                    var instance1 = registry.instance;
+                    var instance2 = registry.instance;
+                    expect(instance1).eql(instance2);
                 });
 
                 it('可以通过目录加载Rest服务', function () {
@@ -136,7 +178,7 @@ describe('tradup', function () {
                     stubs['./DirectoryResourceDescriptorsLoader'] = {loadFrom: dirResourceDescLoaderStub};
 
                     var router = new Object();
-                    registry = proxyquire('../netup/rests/ResourcesRestry', stubs)(dir);
+                    registry = proxyquire('../netup/rests/ResourcesRestry', stubs).create(dir);
                     registry.attachTo(router);
 
                     expect(attachToSpy).calledWith(router).calledTwice;
@@ -306,12 +348,12 @@ describe('tradup', function () {
                         runAndCheckServer(null, 'http://localhost:' + port + '/staticResource.json', done);
                     });
 
-                    it('开发人员可以通过设置资源注册器加载资源', function (done) {
-                        var restDir = path.join(__dirname, './data/rests');
-                        var resourceRegistry = require('../netup/rests/ResourcesRestry')(restDir);
-                        appBuilder.setRests(resourceRegistry).end();
-                        runAndCheckServer(port, 'http://localhost:' + port + '/rests/foo', done);
-                    });
+                    /*it('开发人员可以通过设置资源注册器加载资源', function (done) {
+                     var restDir = path.join(__dirname, './data/rests');
+                     var resourceRegistry = require('../netup/rests/ResourcesRestry')(restDir);
+                     appBuilder.setRests(resourceRegistry).end();
+                     runAndCheckServer(port, 'http://localhost:' + port + '/rests/foo', done);
+                     });*/
                 });
             });
         });

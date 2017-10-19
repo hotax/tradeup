@@ -40,7 +40,7 @@ const SpecificationSchema = new Schema({
     state: {type: Number, enum: ['draft', 'published', 'expired']},
     author: ObjectId,
     createdDate: {type: Date, default: Date.now, required: true},
-    modifiedDate: Date,
+    modifiedDate: Date
 });
 
 module.exports = mongoose.model('Specification', SpecificationSchema);
