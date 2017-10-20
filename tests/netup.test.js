@@ -75,8 +75,73 @@ describe('tradup', function () {
 
                     var rest = restDescriptor.parse(proxyquire('../server/rests/Products', stubs));
                     rest.attachTo(app);
-                    request.get('/rests/products/search?count=10')
-                        .expect(200, result, done);
+                    request.get('/rests/products/all/search?count=10')
+                        .expect(200, {
+                            collection: {
+                                version: '1.0',
+                                href: '/rests/products/all/search?count=10',
+                                links: [],
+                                items: [
+                                    {
+                                        href: '/rests/products/foo',
+                                        data: [
+                                            {
+                                                name: 'code',
+                                                value: '210001'
+                                            },
+                                            {
+                                                name: 'grey',
+                                                value: {
+                                                    yarn: { //纱支
+                                                        warp: {val: [100]},    //径向
+                                                        weft: {val: [200, 300], unit: 'ss'}     //weixiang
+                                                    },
+                                                    dnsty: {
+                                                        warp: {val: [50]},
+                                                        weft: {val: [60, 80, 100]}
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                name: 'desc',
+                                                value: 'the description of foo'
+                                            }
+                                        ],
+                                        links: []
+                                    },
+                                    {
+                                        href: '/rests/products/fee',
+                                        data: [
+                                            {
+                                                name: 'code',
+                                                value: '210020'
+                                            },
+                                            {
+                                                name: 'grey',
+                                                value: {
+                                                    yarn: { //纱支
+                                                        warp: {val: [90]},    //径向
+                                                        weft: {val: [210, 310], unit: 'pp'}     //weixiang
+                                                    },
+                                                    dnsty: {
+                                                        warp: {val: [58]},
+                                                        weft: {val: [65, 85, 110]}
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                name: 'desc',
+                                                value: 'the description of fee'
+                                            }
+                                        ],
+                                        links: []
+                                    }
+                                ],
+                                queries: [],
+                                template: {},
+                                error: {}
+                            }
+                        }, done);
                 })
             });
         });
@@ -114,17 +179,20 @@ describe('tradup', function () {
                 });
             });
 
-            describe('资源', function () {
-                var getSyp;
-                var router, handler, url;
-                var desc;
+            describe('对资源描述的解析', function () {
+                var request, router, handler, url;
+                var desc, resource;
                 var resourceDescriptor;
+                var dataToRepresent;
 
                 beforeEach(function () {
-                    getSpy = sinon.spy();
-                    router = {get: getSpy};
+                    dataToRepresent = {data: 'any data'};
+                    router = require('express')();
+                    request = require('supertest')(router);
                     url = '/rests/foo';
-                    handler = sinon.spy();
+                    handler = function (req, res) {
+                        return dataToRepresent;
+                    };
 
                     desc = {
                         url: url,
@@ -146,10 +214,58 @@ describe('tradup', function () {
                     }).throw('a url must be defined!');
                 });
 
-                it('解析一个最基本的资源', function () {
-                    var resource = resourceDescriptor.parse(desc);
+                it('资源定义错：未定义任何rest服务', function () {
+                    delete desc.rest;
+                    expect(function () {
+                        resourceDescriptor.parse(desc);
+                    }).throw('no restful service is defined!');
+                });
+
+                it('资源定义错：未定义任何rest服务', function () {
+                    desc.rest = [];
+                    expect(function () {
+                        resourceDescriptor.parse(desc);
+                    }).throw('no restful service is defined!');
+                });
+
+                it('资源定义错：未定义处理方法', function () {
+                    delete desc.rest[0].handler;
+                    resource = resourceDescriptor.parse(desc);
+                    expect(function () {
+                        resource.attachTo(router);
+                    }).throw('a handler must be defined!');
+                });
+
+                it('GET方法未返回任何数据，返回500 Internal Server Error错', function (done) {
+                    desc.rest[0].handler = function () {
+                    };
+                    resource = resourceDescriptor.parse(desc);
                     resource.attachTo(router);
-                    expect(getSpy).calledWith(url, handler).calledOnce;
+                    request.get(url)
+                        .expect(500, done);
+                });
+
+                it('解析一个最基本的资源定义', function (done) {
+                    resource = resourceDescriptor.parse(desc);
+                    resource.attachTo(router);
+                    request.get(url)
+                        .expect(200, dataToRepresent, done);
+                });
+
+                it('通过在资源服务中定义representation converter，' +
+                    '将数据转化为资源服务响应的', function (done) {
+                    var responseRepresentation = {data: 'any representation'};
+                    var representationConvertStub = sinon.stub();
+                    representationConvertStub.withArgs(dataToRepresent).returns(responseRepresentation);
+
+                    desc.rest[0].response = {
+                        representation: {convert: representationConvertStub}
+                    };
+                    resource = resourceDescriptor.parse(desc);
+                    resource.attachTo(router);
+
+                    request.get(url)
+                        .expect(200, responseRepresentation, done);
                 });
             });
 
