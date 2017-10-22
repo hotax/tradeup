@@ -359,6 +359,10 @@ describe('tradup', function () {
                 });
             });
 
+            describe('对Rest服务的解析', function () {
+
+            });
+
             describe('资源的注册及其Rest服务的加载', function () {
                 var registry;
 
