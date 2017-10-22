@@ -79,14 +79,12 @@ describe('tradup', function () {
 
                     var parseStub = sinon.stub()
                     stubs['../../netup/rests/CollectionJsonRepresentationBuilder'] = {
-                        parse: function (){ return {convert: convertStub}},
+                        parse: function () {
+                            return {convert: convertStub}
+                        },
                     };
 
                     var desc = proxyquire('../server/rests/Products', stubs);
-
-
-
-
 
 
                     var rest = restDescriptor.parse(proxyquire('../server/rests/Products', stubs));
@@ -248,7 +246,7 @@ describe('tradup', function () {
 
             describe('对资源描述的解析', function () {
                 var request, router, handler, url;
-                var desc, resource;
+                var desc, restDesc, resource;
                 var resourceDescriptor;
                 var dataToRepresent;
 
@@ -261,14 +259,11 @@ describe('tradup', function () {
                         return dataToRepresent;
                     };
 
+                    restDesc = {rest: 'any rest descriptor'};
+
                     desc = {
                         url: url,
-                        rest: [
-                            {
-                                method: 'gEt',
-                                handler: handler
-                            }
-                        ]
+                        rests: [restDesc]
                     }
 
                     resourceDescriptor = require('../netup/rests/ResourceDescriptor');
@@ -277,62 +272,99 @@ describe('tradup', function () {
                 it('一个资源应具有寻址性，必须定义url模板', function () {
                     delete desc.url;
                     expect(function () {
-                        resourceDescriptor.parse(desc);
+                        resourceDescriptor.attach(router, desc);
                     }).throw('a url must be defined!');
                 });
 
                 it('通过url模板构造url', function () {
                     desc.url = '/url/:arg1/and/:arg2';
-                    var resource = resourceDescriptor.parse(desc);
+
+                    var attachSpy = sinon.spy();
+                    stubs['./RestDescriptor'] = {attach: attachSpy};
+                    resourceDescriptor = proxyquire('../netup/rests/ResourceDescriptor', stubs);
+
+                    var resource = resourceDescriptor.attach(router, desc);
                     expect(resource.getUrl(['foo', 'fee'])).eql('/url/foo/and/fee');
                     expect(resource.getUrl(['fuu', 'fee'])).eql('/url/fuu/and/fee');
                 });
 
                 it('资源定义错：未定义任何rest服务', function () {
-                    delete desc.rest;
+                    delete desc.rests;
                     expect(function () {
-                        resourceDescriptor.parse(desc);
+                        resourceDescriptor.attach(router, desc);
                     }).throw('no restful service is defined!');
                 });
 
                 it('资源定义错：未定义任何rest服务', function () {
-                    desc.rest = [];
+                    desc.rests = [];
                     expect(function () {
-                        resourceDescriptor.parse(desc);
+                        resourceDescriptor.attach(router, desc);
                     }).throw('no restful service is defined!');
                 });
 
-                it('资源定义错：未定义处理方法', function () {
-                    delete desc.rest[0].handler;
-                    resource = resourceDescriptor.parse(desc);
+                it('加载一个资源服务', function () {
+                    var attachSpy = sinon.spy();
+                    stubs['./RestDescriptor'] = {attach: attachSpy};
+                    resourceDescriptor = proxyquire('../netup/rests/ResourceDescriptor', stubs);
+
+                    resourceDescriptor.attach(router, desc);
+                    expect(attachSpy).calledWith(router, url, restDesc);
+                });
+
+            });
+
+            describe('对Rest服务的解析', function () {
+                var requestAgent, app, request;
+                var url, desc;
+                var restDescriptor;
+                var dataToRepresent;
+
+                beforeEach(function () {
+                    url = '/rests/foo';
+                    dataToRepresent = {data: 'any data'};
+                    var bodyParser = require('body-parser');
+                    requestAgent = require('supertest');
+                    app = require('express')();
+                    request = requestAgent(app);
+                    app.use(bodyParser.json());
+
+                    desc = {
+                        method: 'gEt',
+                        handler: function (req, res) {
+                            return dataToRepresent;
+                        }
+                    };
+
+                    restDescriptor = require('../netup/rests/RestDescriptor');
+                });
+
+                it('服务定义错：未定义处理方法', function () {
+                    delete desc.handler;
                     expect(function () {
-                        resource.attachTo(router);
+                        restDescriptor.attach(app, url, desc);
                     }).throw('a handler must be defined!');
                 });
 
                 it('GET方法未返回任何数据，返回500 Internal Server Error错', function (done) {
-                    desc.rest[0].handler = function () {
+                    desc.handler = function () {
                     };
-                    resource = resourceDescriptor.parse(desc);
-                    resource.attachTo(router);
+                    restDescriptor.attach(app, url, desc);
                     request.get(url)
                         .expect(500, done);
                 });
 
                 it('解析一个最基本的资源服务定义', function (done) {
-                    resource = resourceDescriptor.parse(desc);
-                    resource.attachTo(router);
+                    restDescriptor.attach(app, url, desc);
                     request.get(url)
                         .expect(200, dataToRepresent, done);
                 });
 
                 it('资源服务处理返回一个Promise', function (done) {
-                    desc.rest[0].handler = function (req, res) {
+                    desc.handler = function (req, res) {
                         var dbOperation = createPromiseStub([], [dataToRepresent]);
                         return dbOperation();
                     };
-                    resource = resourceDescriptor.parse(desc);
-                    resource.attachTo(router);
+                    restDescriptor.attach(app, url, desc);
                     request.get(url)
                         .expect(200, dataToRepresent, done);
                 });
@@ -347,19 +379,23 @@ describe('tradup', function () {
                             data: dataToRepresent
                         })
                         .returns(responseRepresentation);
+                    var writeHeadSpy = sinon.spy();
 
-                    desc.rest[0].response = {
-                        representation: {convert: representationConvertStub}
+                    desc.response = {
+                        representation: {
+                            convert: representationConvertStub,
+                            writeHead: writeHeadSpy
+                        }
                     };
-                    resource = resourceDescriptor.parse(desc);
-                    resource.attachTo(router);
+                    restDescriptor.attach(app, url, desc);
 
                     request.get(url)
-                        .expect(200, responseRepresentation, done);
+                        .expect(200, responseRepresentation)
+                        .end(function (err, res) {
+                            expect(writeHeadSpy).calledOnce;
+                            done();
+                        });
                 });
-            });
-
-            describe('对Rest服务的解析', function () {
 
             });
 

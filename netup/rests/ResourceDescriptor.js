@@ -2,6 +2,7 @@
  * Created by clx on 2017/10/13.
  */
 const Promise = require('bluebird'),
+    restDescriptor = require('./RestDescriptor'),
     pathToRegexp = require('path-to-regexp');
 
 const __parseUrlPattern = function (urlPattern) {
@@ -14,9 +15,9 @@ const __parseUrlPattern = function (urlPattern) {
 }
 
 module.exports = {
-    parse: function (desc) {
+    attach: function (router, desc) {
         if (!desc.url) throw 'a url must be defined!';
-        if (!desc.rest || desc.rest.length < 1) throw 'no restful service is defined!';
+        if (!desc.rests || desc.rests.length < 1) throw 'no restful service is defined!';
 
         var resource = {
             getUrl: function (args) {
@@ -29,28 +30,12 @@ module.exports = {
                 return path;
             },
             attachTo: function (router) {
-                desc.rest.forEach(function (service) {
-                    if (!service.handler) throw  'a handler must be defined!';
-                    router[service.method.toLowerCase()](desc.url, function (req, res) {
-                        var data = service.handler(req, res);
-                        if(!data) return res.status(500).end();
-
-                        var representation;
-                        return Promise.resolve(data)
-                            .then(function (data) {
-                                representation = data;
-                                if(service.response && service.response.representation){
-                                    representation = service.response.representation.convert({
-                                        url: req.url,
-                                        data: representation
-                                    });
-                                }
-                                return res.status(200).json(representation);
-                            });
-                    });
+                desc.rests.forEach(function (service) {
+                    restDescriptor.attach(router, desc.url, service);
                 });
             }
         };
+        resource.attachTo(router);
         resource.urlPattern = __parseUrlPattern(desc.url);
         return resource;
     }
