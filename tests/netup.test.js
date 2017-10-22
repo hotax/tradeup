@@ -30,9 +30,9 @@ describe('tradup', function () {
             });
 
             describe('可搜索的产品列表', function () {
-                it('最新产品列表', function (done) {
-                    var result = {
-                        data: [
+                xit('最新产品列表', function (done) {
+                    var dbData = {
+                        items: [
                             {
                                 _id: 'foo',
                                 code: '210001',
@@ -70,8 +70,24 @@ describe('tradup', function () {
                             total: 3
                         }
                     };
-                    var searchStub = createPromiseStub([{count: 10}], [result]);
+                    var searchStub = createPromiseStub([{count: 10}], [dbData]);
                     stubs['../data/Products'] = {search: searchStub};
+
+                    var result = {collection: 'any collection representation contents'};
+                    var convertStub = sinon.stub();
+                    convertStub.withArgs(dbData).returns(result);
+
+                    var parseStub = sinon.stub()
+                    stubs['../../netup/rests/CollectionJsonRepresentationBuilder'] = {
+                        parse: function (){ return {convert: convertStub}},
+                    };
+
+                    var desc = proxyquire('../server/rests/Products', stubs);
+
+
+
+
+
 
                     var rest = restDescriptor.parse(proxyquire('../server/rests/Products', stubs));
                     rest.attachTo(app);
@@ -160,6 +176,61 @@ describe('tradup', function () {
 
         describe('Restful', function () {
 
+            describe('Collection+JSON representation converter', function () {
+                it('最基本的表述', function () {
+                    var representationDesc = {
+                        element: {
+                            resourceId: './fooresource'
+                        }
+                    };
+                    var getUrlStub = sinon.stub();
+                    getUrlStub.withArgs(representationDesc.element.resourceId, ['foo']).returns('/foos/foo');
+                    getUrlStub.withArgs(representationDesc.element.resourceId, ['fee']).returns('/foos/fee');
+                    stubs['./ResourcesRestry'] = {getUrl: getUrlStub};
+
+                    var url = '/foocollection/all';
+                    var data = {
+                        url: url,
+                        data: {
+                            items: [
+                                {
+                                    _id: 'foo',
+                                    foo: 'foo value',
+                                    fee: 'fee value'
+                                },
+                                {
+                                    _id: 'fee',
+                                    fuu: 'fuu value',
+                                }
+                            ]
+                        }
+                    };
+                    var builder = proxyquire('../netup/rests/CollectionJsonRepresentationBuilder', stubs);
+
+                    expect(builder.parse(representationDesc).convert(data)).eql({
+                        collection: {
+                            href: url,
+                            version: "1.0",
+                            items: [
+                                {
+                                    href: "/foos/foo",
+                                    data: [
+                                        {name: "foo", value: "foo value"},
+                                        {name: "fee", value: "fee value"},
+                                    ]
+                                },
+                                {
+                                    href: "/foos/fee",
+                                    data: [
+                                        {name: "fuu", value: "fuu value"},
+                                    ]
+                                }
+                            ]
+                        }
+                    })
+                })
+            });
+
             describe('基于目录内资源描述文件的资源加载器', function () {
                 var loader;
 
@@ -168,14 +239,10 @@ describe('tradup', function () {
 
                 it('加载一个资源描述', function () {
                     var fooDesc = require('./data/rests/foo');
-                    var fooRes = {fee: 'feeRes'};
-                    var parseResourceDescriptorStub = sinon.stub();
-                    parseResourceDescriptorStub.withArgs(fooDesc).returns(fooRes);
-                    stubs['./ResourceDescriptor'] = {parse: parseResourceDescriptorStub};
-
-                    loader = proxyquire('../netup/rests/DirectoryResourceDescriptorsLoader', stubs);
-                    var rests = loader.loadFrom(path.join(__dirname, './data/rests'));
-                    expect(rests[0]).eql(fooRes);
+                    loader = require('../netup/rests/DirectoryResourceDescriptorsLoader');
+                    expect(loader.loadFrom(path.join(__dirname, './data/rests'))).eql({
+                        foo: fooDesc
+                    });
                 });
             });
 
@@ -198,7 +265,7 @@ describe('tradup', function () {
                         url: url,
                         rest: [
                             {
-                                method: 'get',
+                                method: 'gEt',
                                 handler: handler
                             }
                         ]
@@ -207,11 +274,18 @@ describe('tradup', function () {
                     resourceDescriptor = require('../netup/rests/ResourceDescriptor');
                 });
 
-                it('一个资源应具有寻址性，必须定义url', function () {
+                it('一个资源应具有寻址性，必须定义url模板', function () {
                     delete desc.url;
                     expect(function () {
                         resourceDescriptor.parse(desc);
                     }).throw('a url must be defined!');
+                });
+
+                it('通过url模板构造url', function () {
+                    desc.url = '/url/:arg1/and/:arg2';
+                    var resource = resourceDescriptor.parse(desc);
+                    expect(resource.getUrl(['foo', 'fee'])).eql('/url/foo/and/fee');
+                    expect(resource.getUrl(['fuu', 'fee'])).eql('/url/fuu/and/fee');
                 });
 
                 it('资源定义错：未定义任何rest服务', function () {
@@ -245,7 +319,18 @@ describe('tradup', function () {
                         .expect(500, done);
                 });
 
-                it('解析一个最基本的资源定义', function (done) {
+                it('解析一个最基本的资源服务定义', function (done) {
+                    resource = resourceDescriptor.parse(desc);
+                    resource.attachTo(router);
+                    request.get(url)
+                        .expect(200, dataToRepresent, done);
+                });
+
+                it('资源服务处理返回一个Promise', function (done) {
+                    desc.rest[0].handler = function (req, res) {
+                        var dbOperation = createPromiseStub([], [dataToRepresent]);
+                        return dbOperation();
+                    };
                     resource = resourceDescriptor.parse(desc);
                     resource.attachTo(router);
                     request.get(url)
@@ -253,10 +338,15 @@ describe('tradup', function () {
                 });
 
                 it('通过在资源服务中定义representation converter，' +
-                    '将数据转化为资源服务响应的', function (done) {
+                    '将数据转化为资源服务响应的表述', function (done) {
                     var responseRepresentation = {data: 'any representation'};
                     var representationConvertStub = sinon.stub();
-                    representationConvertStub.withArgs(dataToRepresent).returns(responseRepresentation);
+                    representationConvertStub
+                        .withArgs({
+                            url: url,
+                            data: dataToRepresent
+                        })
+                        .returns(responseRepresentation);
 
                     desc.rest[0].response = {
                         representation: {convert: representationConvertStub}
@@ -269,36 +359,60 @@ describe('tradup', function () {
                 });
             });
 
-            describe('Rest服务注册器', function () {
+            describe('资源的注册及其Rest服务的加载', function () {
                 var registry;
 
                 beforeEach(function () {
                     registry = require('../netup/rests/ResourcesRestry');
                 });
 
-                it('确保Rests服务管理器是单例', function () {
-                    registry.create('foo/dir');
-                    var instance1 = registry.instance;
-                    var instance2 = registry.instance;
-                    expect(instance1).eql(instance2);
-                });
+                it('可以加载所有的资源服务', function () {
+                    var fooDesc = {foo: 'foo desc'};
+                    var feeDesc = {fee: 'fee desc'};
+                    var resourceDescriptors = {
+                        foo: fooDesc,
+                        fee: feeDesc
+                    };
 
-                it('可以通过目录加载Rest服务', function () {
                     var attachToSpy = sinon.spy();
                     var resource1 = {attachTo: attachToSpy};
                     var resource2 = {attachTo: attachToSpy};
 
-                    var dir = '/dir';
-                    var dirResourceDescLoaderStub = sinon.stub();
-                    dirResourceDescLoaderStub.withArgs(dir).returns([resource1, resource2]);
-                    stubs['./DirectoryResourceDescriptorsLoader'] = {loadFrom: dirResourceDescLoaderStub};
+                    var parseStub = sinon.stub();
+                    parseStub.withArgs(fooDesc).returns(resource1);
+                    parseStub.withArgs(feeDesc).returns(resource2);
+                    stubs['./ResourceDescriptor'] = {parse: parseStub};
 
-                    var router = new Object();
-                    registry = proxyquire('../netup/rests/ResourcesRestry', stubs).create(dir);
+                    registry = proxyquire('../netup/rests/ResourcesRestry', stubs);
+                    registry.load(resourceDescriptors);
+
+                    var router = {data: 'any app object'};
                     registry.attachTo(router);
 
                     expect(attachToSpy).calledWith(router).calledTwice;
-                })
+                });
+
+                it('资源注册器就是一个单例的资源url构造器', function () {
+                    var fooResourceId = "./foo";
+                    var fooDesc = {foo: 'foo desc'};
+                    var resourceDescriptors = {};
+                    resourceDescriptors[fooResourceId] = fooDesc;
+
+                    var urlArgs = ['foo'];
+                    var expectedUrl = '/url/foo';
+                    var getUrlStub = sinon.stub();
+                    getUrlStub.withArgs(urlArgs).returns(expectedUrl);
+                    var fooResource = {getUrl: getUrlStub};
+
+                    var parseStub = sinon.stub();
+                    parseStub.withArgs(fooDesc).returns(fooResource);
+                    stubs['./ResourceDescriptor'] = {parse: parseStub};
+
+                    registry = proxyquire('../netup/rests/ResourcesRestry', stubs);
+                    registry.load(resourceDescriptors);
+                    var url = registry.getUrl(fooResourceId, ['foo']);
+                    expect(url).eql(expectedUrl);
+                });
             });
 
         });

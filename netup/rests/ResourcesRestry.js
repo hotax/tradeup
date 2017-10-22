@@ -1,20 +1,30 @@
 /**
  * Created by clx on 2017/10/13.
  */
-const resourceDescriptorsLoader = require('./DirectoryResourceDescriptorsLoader');
+const resourceDescriptorParser = require('./ResourceDescriptor');
+
 var __ins;
+var __resources = {};
 
 module.exports = {
-    create: function (dirs) {
+    load: function (resourceDescriptors) {
+        for (key in resourceDescriptors) {
+            var resource = resourceDescriptorParser.parse(resourceDescriptors[key]);
+            __resources[key] = resource;
+        }
         __ins = {
+            getUrl: function (id, args) {
+                var resource = __resources[id];
+                return resource.getUrl(args);
+            },
             attachTo: function (router) {
-                var descs = resourceDescriptorsLoader.loadFrom(dirs);
-                descs.forEach(function (desc) {
-                    desc.attachTo(router);
-                });
+                for(key in __resources){
+                    __resources[key].attachTo(router);
+                }
             }
         };
-        this.instance = __ins;
+        this.attachTo = __ins.attachTo;
+        this.getUrl = __ins.getUrl;
         return __ins;
     }
 }

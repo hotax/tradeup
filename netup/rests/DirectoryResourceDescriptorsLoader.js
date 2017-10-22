@@ -2,23 +2,16 @@
  * Created by clx on 2017/10/14.
  */
 const fs = require('fs'),
-    path = require('path'),
-    resourceDescriptor = require('./ResourceDescriptor');
-
-
-var log4js = require('log4js');
-log4js.configure("log4js.conf", {reloadSecs: 300});
-var logger = log4js.getLogger();
+    path = require('path');
 
 module.exports = {
     loadFrom: function (dir) {
-        var rests = [];
+        var rests = {};
         var files = fs.readdirSync(dir);
         files.forEach(function (f) {
-            var id = path.join(dir, f);
-            var desc = require(id);
-            var rest = resourceDescriptor.parse(desc);
-            rests.push(rest);
+            var desc = require(path.join(dir, f));
+            var id = f.substr(0, f.lastIndexOf('.'));   //去除文件名后缀
+            rests[id] = desc;
         });
         return rests;
     }

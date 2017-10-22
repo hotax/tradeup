@@ -50,6 +50,7 @@
     "passport-local": "^1.0.0",
     "passport-wechat-oauth": "0.0.1",
     "path": "^0.12.7",
+    "path-to-regexp": "^2.1.0",
     "pixl-xml": "^1.0.9",
     "querystring": "^0.2.0",
     "request": "^2.75.0",
