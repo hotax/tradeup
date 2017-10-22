@@ -363,7 +363,6 @@ describe('tradup', function () {
                 var registry;
 
                 beforeEach(function () {
-                    registry = require('../netup/rests/ResourcesRestry');
                 });
 
                 it('可以加载所有的资源服务', function () {
