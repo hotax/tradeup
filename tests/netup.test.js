@@ -204,8 +204,8 @@ describe('tradup', function () {
                         }
                     };
                     var builder = proxyquire('../netup/rests/CollectionJsonRepresentationBuilder', stubs);
-
-                    expect(builder.parse(representationDesc).convert(data)).eql({
+                    var converter = builder.parse(representationDesc);
+                    expect(converter.convert(data)).eql({
                         collection: {
                             href: url,
                             version: "1.0",
@@ -225,7 +225,11 @@ describe('tradup', function () {
                                 }
                             ]
                         }
-                    })
+                    });
+                    const responseMock = require('mock-express-response');
+                    var res = new responseMock();
+                    converter.writeHead(res);
+                    expect(res.get('Content-Type')).eql('application/vnd.collection+json');
                 })
             });
 
@@ -413,44 +417,39 @@ describe('tradup', function () {
                         fee: feeDesc
                     };
 
-                    var attachToSpy = sinon.spy();
-                    var resource1 = {attachTo: attachToSpy};
-                    var resource2 = {attachTo: attachToSpy};
+                    var router = {data: 'any app object'};
 
-                    var parseStub = sinon.stub();
-                    parseStub.withArgs(fooDesc).returns(resource1);
-                    parseStub.withArgs(feeDesc).returns(resource2);
-                    stubs['./ResourceDescriptor'] = {parse: parseStub};
+                    var attachSpy = sinon.spy();
+                    attachSpy.calledWith(router, fooDesc);
+                    attachSpy.calledWith(router, feeDesc);
+                    stubs['./ResourceDescriptor'] = {attach: attachSpy};
 
                     registry = proxyquire('../netup/rests/ResourcesRestry', stubs);
                     registry.load(resourceDescriptors);
-
-                    var router = {data: 'any app object'};
                     registry.attachTo(router);
-
-                    expect(attachToSpy).calledWith(router).calledTwice;
                 });
 
                 it('资源注册器就是一个单例的资源url构造器', function () {
-                    var fooResourceId = "./foo";
+                    var fooResourceId = "foo";
                     var fooDesc = {foo: 'foo desc'};
                     var resourceDescriptors = {};
                     resourceDescriptors[fooResourceId] = fooDesc;
 
                     var urlArgs = ['foo'];
-                    var expectedUrl = '/url/foo';
-                    var getUrlStub = sinon.stub();
-                    getUrlStub.withArgs(urlArgs).returns(expectedUrl);
-                    var fooResource = {getUrl: getUrlStub};
+                    var getUrlSpy = sinon.spy();
+                    var fooResource = {getUrl: getUrlSpy};
 
-                    var parseStub = sinon.stub();
-                    parseStub.withArgs(fooDesc).returns(fooResource);
-                    stubs['./ResourceDescriptor'] = {parse: parseStub};
+                    var router = {data: 'any app object'};
+                    var attachStub = sinon.stub();
+                    attachStub.withArgs(router, fooDesc).returns(fooResource);
+                    stubs['./ResourceDescriptor'] = {attach: attachStub};
 
                     registry = proxyquire('../netup/rests/ResourcesRestry', stubs);
                     registry.load(resourceDescriptors);
+                    registry.attachTo(router);
+
                     var url = registry.getUrl(fooResourceId, ['foo']);
-                    expect(url).eql(expectedUrl);
+                    expect(getUrlSpy).calledWith(urlArgs).calledOnce;
                 });
             });
 

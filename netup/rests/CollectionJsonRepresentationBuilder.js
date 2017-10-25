@@ -1,7 +1,8 @@
 /**
  * Created by clx on 2017/10/21.
  */
-const linkBuilder = require('./ResourcesRestry');
+const linkBuilder = require('./ResourcesRestry'),
+    contentType = 'application/vnd.collection+json';
 
 module.exports = {
     parse: function (desc) {
@@ -34,6 +35,9 @@ module.exports = {
                     result.collection.items.push(item);
                 });
                 return result;
+            },
+            writeHead:function (res) {
+                res.set('Content-Type', contentType);
             }
         }
     }

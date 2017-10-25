@@ -8,18 +8,15 @@ var __resources = {};
 
 module.exports = {
     load: function (resourceDescriptors) {
-        for (key in resourceDescriptors) {
-            var resource = resourceDescriptorParser.parse(resourceDescriptors[key]);
-            __resources[key] = resource;
-        }
         __ins = {
             getUrl: function (id, args) {
                 var resource = __resources[id];
                 return resource.getUrl(args);
             },
             attachTo: function (router) {
-                for(key in __resources){
-                    __resources[key].attachTo(router);
+                for (key in resourceDescriptors) {
+                    var resource = resourceDescriptorParser.attach(router, resourceDescriptors[key]);
+                    __resources[key] = resource;
                 }
             }
         };
