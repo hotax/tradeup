@@ -448,7 +448,7 @@ describe('tradup', function () {
                     registry.load(resourceDescriptors);
                     registry.attachTo(router);
 
-                    var url = registry.getUrl(fooResourceId, ['foo']);
+                    var url = registry.getUrl(fooResourceId, urlArgs);
                     expect(getUrlSpy).calledWith(urlArgs).calledOnce;
                 });
             });
