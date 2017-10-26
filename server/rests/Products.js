@@ -2,7 +2,7 @@
  * Created by clx on 2017/10/13.
  */
 
-var dbProducts = require('../data/Products'),
+var dbProducts = require('../data/Specifications'),
     representationConverter = require('../../netup/rests/CollectionJsonRepresentationBuilder').parse({
         element: {
             resourceId: 'Product'

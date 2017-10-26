@@ -16,6 +16,86 @@ describe('tradup', function () {
     });
 
     describe('application', function () {
+        describe('数据库', function () {
+            var dbConnection;
+            before(function (done) {
+                //ObjectID = require('mongodb').ObjectID;
+                mongoose.Promise = global.Promise;
+                if (!mongoose.connection.db)
+                    dbConnection = mongoose.connect(dbURI, {
+                        useMongoClient: false,
+                        /* other options */
+                    });
+                done();
+
+                //initDB(insertDocsInSequential, done);
+                //initDB(insertDocsInParallel, done);
+            });
+
+            after(function (done) {
+                dbConnection.disconnect(done);
+            });
+
+            afterEach(function (done) {
+                clearDB(done);
+            });
+
+            describe('specification', function (done) {
+                it('新增', function (done) {
+                    var model = require('../server/data/models/specification');
+                    var data = {
+                        code: 'foo',    //编码
+                        name: 'foo specification',    //名称
+                        grey: {     //胚布
+                            yarn: { //纱支
+                                warp: {val: [20,30,40], unit: 'S'},    //径向
+                                weft: {val: [35]}     //weixiang
+                            },
+                            dnsty: {
+                                warp: {val: [100]},
+                                weft: {}
+                            },
+                            width: 28.63,
+                            GSM: 45.68
+                        },
+                        product: {
+                            yarn: {
+                                dnstyWarp: {val: [20,30,40], unit: 'S'},
+                                dnstyWeft: {val: [20,30,40], unit: 'S'}
+                            },
+                            dnsty: {
+                                BW: {
+                                    warp: {val: [20,30,40], unit: 'S'},
+                                    weft: {val: [20,30,40], unit: 'S'}
+                                },
+                                AW: {
+                                    warp: {val: [20,30,40], unit: 'S'},
+                                    weft: {val: [20,30,40], unit: 'S'}
+                                },
+                            },
+                            width: 20,
+                            GSM: 50
+                        },
+                        desc: 'desc of foo',   //描述
+                        constructure: 'constructure of foo',    //组织
+                        state: 0,
+                        //author: ObjectId,
+                        //createdDate: {type: Date, default: Date.now, required: true},
+                        //modifiedDate: Date
+                    };
+                    var specification = new model(data);
+                    specification.save()
+                        .then(function (spec) {
+                            expect(spec).not.null;
+                            done();
+                        })
+                        .catch(function (err) {
+                            done(err);
+                        })
+                })
+            })
+        });
+
         describe('rests', function () {
             var request, app, restDescriptor;
             var requestAgent;
