@@ -41,8 +41,8 @@ describe('tradup', function () {
             });
 
             describe('specification', function (done) {
-                it('新增', function (done) {
-                    var model = require('../server/data/models/specification');
+                it('新增', function () {
+                    var specifications = require('../server/data/Specifications');
                     var data = {
                         code: 'foo',    //编码
                         name: 'foo specification',    //名称
@@ -83,16 +83,11 @@ describe('tradup', function () {
                         //createdDate: {type: Date, default: Date.now, required: true},
                         //modifiedDate: Date
                     };
-                    var specification = new model(data);
-                    specification.save()
-                        .then(function (spec) {
-                            expect(spec).not.null;
-                            done();
-                        })
-                        .catch(function (err) {
-                            done(err);
-                        })
-                })
+                    return specifications.add(data)
+                        .then(function (obj) {
+                            expect(obj).not.null;
+                        });
+                });
             })
         });
 
@@ -330,7 +325,7 @@ describe('tradup', function () {
 
             describe('对资源描述的解析', function () {
                 var request, router, handler, url;
-                var desc, restDesc, resource;
+                var desc, restDesc, resourceId;
                 var resourceDescriptor;
                 var dataToRepresent;
 
@@ -339,6 +334,7 @@ describe('tradup', function () {
                     router = require('express')();
                     request = require('supertest')(router);
                     url = '/rests/foo';
+                    resourceId = 'foo';
                     handler = function (req, res) {
                         return dataToRepresent;
                     };
@@ -356,7 +352,7 @@ describe('tradup', function () {
                 it('一个资源应具有寻址性，必须定义url模板', function () {
                     delete desc.url;
                     expect(function () {
-                        resourceDescriptor.attach(router, desc);
+                        resourceDescriptor.attach(router, resourceId, desc);
                     }).throw('a url must be defined!');
                 });
 
@@ -367,7 +363,7 @@ describe('tradup', function () {
                     stubs['./RestDescriptor'] = {attach: attachSpy};
                     resourceDescriptor = proxyquire('../netup/rests/ResourceDescriptor', stubs);
 
-                    var resource = resourceDescriptor.attach(router, desc);
+                    var resource = resourceDescriptor.attach(router, resourceId, desc);
                     expect(resource.getUrl(['foo', 'fee'])).eql('/url/foo/and/fee');
                     expect(resource.getUrl(['fuu', 'fee'])).eql('/url/fuu/and/fee');
                 });
@@ -375,14 +371,14 @@ describe('tradup', function () {
                 it('资源定义错：未定义任何rest服务', function () {
                     delete desc.rests;
                     expect(function () {
-                        resourceDescriptor.attach(router, desc);
+                        resourceDescriptor.attach(router, resourceId, desc);
                     }).throw('no restful service is defined!');
                 });
 
                 it('资源定义错：未定义任何rest服务', function () {
                     desc.rests = [];
                     expect(function () {
-                        resourceDescriptor.attach(router, desc);
+                        resourceDescriptor.attach(router, resourceId, desc);
                     }).throw('no restful service is defined!');
                 });
 
@@ -391,15 +387,15 @@ describe('tradup', function () {
                     stubs['./RestDescriptor'] = {attach: attachSpy};
                     resourceDescriptor = proxyquire('../netup/rests/ResourceDescriptor', stubs);
 
-                    resourceDescriptor.attach(router, desc);
-                    expect(attachSpy).calledWith(router, url, restDesc);
+                    resourceDescriptor.attach(router, resourceId, desc);
+                    expect(attachSpy).calledWith(router, resourceId, url, restDesc);
                 });
 
             });
 
             describe('对Rest服务的解析', function () {
                 var requestAgent, app, request;
-                var url, desc;
+                var url, desc, resourceId;
                 var restDescriptor;
                 var dataToRepresent;
 
@@ -412,6 +408,7 @@ describe('tradup', function () {
                     request = requestAgent(app);
                     app.use(bodyParser.json());
 
+                    resourceId = 'foo';
                     desc = {
                         method: 'gEt',
                         handler: function (req, res) {
@@ -425,20 +422,20 @@ describe('tradup', function () {
                 it('服务定义错：未定义处理方法', function () {
                     delete desc.handler;
                     expect(function () {
-                        restDescriptor.attach(app, url, desc);
+                        restDescriptor.attach(app, resourceId, url, desc);
                     }).throw('a handler must be defined!');
                 });
 
                 it('GET方法未返回任何数据，返回500 Internal Server Error错', function (done) {
                     desc.handler = function () {
                     };
-                    restDescriptor.attach(app, url, desc);
+                    restDescriptor.attach(app, resourceId, url, desc);
                     request.get(url)
                         .expect(500, done);
                 });
 
                 it('解析一个最基本的资源服务定义', function (done) {
-                    restDescriptor.attach(app, url, desc);
+                    restDescriptor.attach(app, resourceId, url, desc);
                     request.get(url)
                         .expect(200, dataToRepresent, done);
                 });
@@ -448,7 +445,7 @@ describe('tradup', function () {
                         var dbOperation = createPromiseStub([], [dataToRepresent]);
                         return dbOperation();
                     };
-                    restDescriptor.attach(app, url, desc);
+                    restDescriptor.attach(app, resourceId, url, desc);
                     request.get(url)
                         .expect(200, dataToRepresent, done);
                 });
@@ -471,7 +468,7 @@ describe('tradup', function () {
                             writeHead: writeHeadSpy
                         }
                     };
-                    restDescriptor.attach(app, url, desc);
+                    restDescriptor.attach(app, resourceId, url, desc);
 
                     request.get(url)
                         .expect(200, responseRepresentation)
@@ -480,7 +477,6 @@ describe('tradup', function () {
                             done();
                         });
                 });
-
             });
 
             describe('资源的注册及其Rest服务的加载', function () {
@@ -500,13 +496,14 @@ describe('tradup', function () {
                     var router = {data: 'any app object'};
 
                     var attachSpy = sinon.spy();
-                    attachSpy.calledWith(router, fooDesc);
-                    attachSpy.calledWith(router, feeDesc);
                     stubs['./ResourceDescriptor'] = {attach: attachSpy};
 
                     registry = proxyquire('../netup/rests/ResourcesRestry', stubs);
                     registry.load(resourceDescriptors);
                     registry.attachTo(router);
+
+                    expect(attachSpy).calledWith(router, 'foo', fooDesc);
+                    expect(attachSpy).calledWith(router, 'fee', feeDesc);
                 });
 
                 it('资源注册器就是一个单例的资源url构造器', function () {
@@ -521,7 +518,7 @@ describe('tradup', function () {
 
                     var router = {data: 'any app object'};
                     var attachStub = sinon.stub();
-                    attachStub.withArgs(router, fooDesc).returns(fooResource);
+                    attachStub.withArgs(router, fooResourceId, fooDesc).returns(fooResource);
                     stubs['./ResourceDescriptor'] = {attach: attachStub};
 
                     registry = proxyquire('../netup/rests/ResourcesRestry', stubs);

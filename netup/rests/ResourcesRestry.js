@@ -15,7 +15,7 @@ module.exports = {
             },
             attachTo: function (router) {
                 for (key in resourceDescriptors) {
-                    var resource = resourceDescriptorParser.attach(router, resourceDescriptors[key]);
+                    var resource = resourceDescriptorParser.attach(router, key, resourceDescriptors[key]);
                     __resources[key] = resource;
                 }
             }

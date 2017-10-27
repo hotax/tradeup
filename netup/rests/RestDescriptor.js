@@ -4,7 +4,7 @@
 const Promise = require('bluebird');
 
 module.exports = {
-    attach: function (router, urlPattern, restDesc) {
+    attach: function (router, resourceId, urlPattern, restDesc) {
         if (!restDesc.handler) throw  'a handler must be defined!';
         router[restDesc.method.toLowerCase()](urlPattern, function (req, res) {
             var data = restDesc.handler(req, res);
@@ -14,7 +14,8 @@ module.exports = {
             return Promise.resolve(data)
                 .then(function (data) {
                     representation = data;
-                    if (restDesc.response && restDesc.response.representation) {
+                    var resDesc = restDesc.response;
+                    if (resDesc && resDesc.representation) {
                         var converter = restDesc.response.representation;
                         representation = converter.convert({
                             url: req.url,
