@@ -3,6 +3,11 @@
  */
 module.exports = {
     url: '/rests/foo',
+    transitions: {
+        foo:['data._id'],
+        fee:['pathparams.id'],
+        fuu:['queryparams.page']
+    },
     rest: [
         {
             method: 'Get',

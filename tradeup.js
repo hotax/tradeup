@@ -43,7 +43,8 @@ module.exports = function () {
     connectDb(function () {
         logger.info('connect mongodb success .......');
         var server = appBuilder.run(defaultPort, function () {
-            logger.info('the server is listening at ' + server.address().port);
+            var addr = server.address();
+            logger.info('the server is running on ' + addr.address + ' and listening at ' + addr.port);
         });
     });
 };

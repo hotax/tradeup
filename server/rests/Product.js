@@ -8,7 +8,7 @@ module.exports = {
         {
             method: 'Get',
             handler: function (req, res) {
-                return 'I am product';
+                return 'I am product ' + req.params.id;
             }
         }
     ]

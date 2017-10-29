@@ -40,7 +40,7 @@ describe('tradup', function () {
                 clearDB(done);
             });
 
-            describe('specification', function (done) {
+            describe('specification', function () {
                 it('新增', function () {
                     var specifications = require('../server/data/Specifications');
                     var data = {
@@ -479,7 +479,7 @@ describe('tradup', function () {
                 });
             });
 
-            describe('资源的注册及其Rest服务的加载', function () {
+            describe('资源注册器', function () {
                 var registry;
 
                 beforeEach(function () {
