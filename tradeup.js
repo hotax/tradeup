@@ -4,7 +4,7 @@
 const path = require('path'),
     restDir = path.join(__dirname, './server/rests'),
     resourceDescriptors = require('./netup/rests/DirectoryResourceDescriptorsLoader').loadFrom(restDir),
-    restRegistry = require('./netup/rests/ResourcesRestry').load(resourceDescriptors),
+    resourceRegistry = require('./netup/rests/ResourceDescriptor'),
     connectDb = require('./netup/db/mongoDb/ConnectMongoDb'),
     appBuilder = require('./netup/express/AppBuilder');
 
@@ -36,7 +36,7 @@ module.exports = function () {
     appBuilder
         .begin(__dirname)
         .setViewEngine(viewEngineFactory)
-        .setRests(restRegistry)
+        .setResources(resourceRegistry, resourceDescriptors)
         .setWebRoot('/website', './client/public')
         .end();
 

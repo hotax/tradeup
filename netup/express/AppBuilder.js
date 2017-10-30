@@ -9,15 +9,14 @@ const util = require('util'),
     express = require('express'),
     app = express();
 
-const registerRests = require('./../rests/ResourcesRestry');
-
 var log4js = require('log4js');
 log4js.configure("log4js.conf", {reloadSecs: 300});
 var logger = log4js.getLogger();
 
 module.exports.begin = function (base) {
     var baseDir = base || __dirname;
-    var restsRegistry, viewEngine;
+    var __resourceRegistry, __resources;
+    var viewEngine;
 
     initappobject();
     this.setWebRoot = function (root, dir) {
@@ -25,19 +24,20 @@ module.exports.begin = function (base) {
         return this;
     };
     this.setViewEngine = function (engine) {
-        restsRegistry = engine;
+        viewEngine = engine;
         return this;
     };
-    this.setRests = function (rests) {
-        restsRegistry = rests;
+    this.setResources = function (resourceRegistry, resources) {
+        __resourceRegistry = resourceRegistry;
+        __resources = resources;
         return this;
     };
     this.end = function () {
-        if(viewEngine) viewEngine.attachTo(app);
-        if(restsRegistry) restsRegistry.attachTo(app);
+        if (viewEngine) viewEngine.attachTo(app);
+        if (__resourceRegistry) for (var id in __resources) __resourceRegistry.attach(app, id, __resources[id]);
         return app;
     };
-    this.run = function(portNum, callback){
+    this.run = function (portNum, callback) {
         var port = process.env.PORT || portNum;
         return app.listen(port, process.env.IP || "0.0.0.0", callback);
     };
@@ -46,7 +46,7 @@ module.exports.begin = function (base) {
 
     function initappobject() {
         app.use(morgan('dev')); // used as logger
-        app.use(bodyParser.urlencoded({ extended: true }));
+        app.use(bodyParser.urlencoded({extended: true}));
         app.use(bodyParser.json());
         app.use(xmlBodyParser({
             explicitArray: false,

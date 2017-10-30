@@ -2,12 +2,7 @@
  * Created by clx on 2017/10/13.
  */
 
-var dbProducts = require('../data/Specifications'),
-    representationConverter = require('../../netup/rests/CollectionJsonRepresentationBuilder').parse({
-        element: {
-            resourceId: 'Product'
-        }
-    });
+var dbProducts = require('../data/Specifications');
 
 const products = {
     search: function (req, res) {
@@ -15,7 +10,7 @@ const products = {
         var dbData = {
             items: [
                 {
-                    _id: 'foo',
+                    id: 'foo',
                     code: '210001',
                     grey: {
                         yarn: { //纱支
@@ -28,9 +23,8 @@ const products = {
                         }
                     },
                     desc: 'the description of foo'
-                },
-                {
-                    _id: 'fee',
+                }, {
+                    id: 'fee',
                     code: '210020',
                     grey: {
                         yarn: { //纱支
@@ -51,7 +45,9 @@ const products = {
                 total: 3
             }
         };
-        return dbData;
+        return {
+            data: dbData
+        };
         //return dbProducts.search(query);
     }
 }
@@ -63,7 +59,11 @@ module.exports = {
             method: 'Get',
             handler: products.search,
             response: {
-                representation: representationConverter
+                ok: {
+                    type: '@collection',
+                    "@collection": {type: 'Product'}
+                }
+
             }
         }
     ]
