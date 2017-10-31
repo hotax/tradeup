@@ -451,7 +451,7 @@ describe('tradup', function () {
             describe('对资源描述的解析', function () {
                 var request, router, handler, url;
                 var desc, restDesc, resourceId;
-                var resourceDescriptor, attachSpy;
+                var resourceRegistry, attachSpy;
                 var dataToRepresent;
 
                 beforeEach(function () {
@@ -473,13 +473,13 @@ describe('tradup', function () {
 
                     attachSpy = sinon.spy();
                     stubs['./RestDescriptor'] = {attach: attachSpy};
-                    resourceDescriptor = proxyquire('../netup/rests/ResourceRegistry', stubs);
+                    resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
                 });
 
                 it('一个资源应具有寻址性，必须定义url模板', function () {
                     delete desc.url;
                     expect(function () {
-                        resourceDescriptor.attach(router, resourceId, desc);
+                        resourceRegistry.attach(router, resourceId, desc);
                     }).throw('a url must be defined!');
                 });
 
@@ -497,7 +497,7 @@ describe('tradup', function () {
                     });
 
                     it('无路径变量', function () {
-                        resource = resourceDescriptor.attach(router, resourceId, desc);
+                        resource = resourceRegistry.attach(router, resourceId, desc);
                         expect(resource.getUrl()).eql(url);
                     });
 
@@ -507,7 +507,7 @@ describe('tradup', function () {
                         req.params.arg2 = '3456';
                         req.query.arg1 = '5678';
 
-                        resource = resourceDescriptor.attach(router, resourceId, desc);
+                        resource = resourceRegistry.attach(router, resourceId, desc);
                         expect(resource.getUrl(fromResourceId, context, req)).eql('/url/5678/and/3456/and/1234');
                     });
 
@@ -524,7 +524,7 @@ describe('tradup', function () {
                         req.params.foo = '3456';
                         req.query.foo = '5678';
 
-                        resource = resourceDescriptor.attach(router, resourceId, desc);
+                        resource = resourceRegistry.attach(router, resourceId, desc);
                         expect(resource.getUrl(fromResourceId, context, req)).eql('/url/5678/and/3456/and/1234/and/9876');
                     });
                 });
@@ -538,8 +538,8 @@ describe('tradup', function () {
                         url: '/url/fee',
                         rests: [restDesc]
                     };
-                    var fooResource = resourceDescriptor.attach(router, 'foo', fooDesc);
-                    resourceDescriptor.attach(router, 'fee', feeDesc);
+                    var fooResource = resourceRegistry.attach(router, 'foo', fooDesc);
+                    resourceRegistry.attach(router, 'fee', feeDesc);
                     expect(fooResource.getTransitionUrl('fee')).eql('/url/fee');
                 });
 
@@ -559,8 +559,9 @@ describe('tradup', function () {
                     getTransitionUrlStub.withArgs('fee', context, req).returns(feeUrl);
                     getTransitionUrlStub.withArgs('fuu', context, req).returns(fuuUrl);
 
-                    resourceDescriptor = proxyquire('../netup/rests/ResourceRegistry', stubs);
-                    var resource = resourceDescriptor.attach(router, resourceId, desc);
+                    resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
+
+                    var resource = resourceRegistry.attach(router, resourceId, desc);
                     resource.getTransitionUrl = getTransitionUrlStub;
 
                     return resource.getLinks(context, req)
@@ -576,23 +577,23 @@ describe('tradup', function () {
                 it('资源定义错：未定义任何rest服务', function () {
                     delete desc.rests;
                     expect(function () {
-                        resourceDescriptor.attach(router, resourceId, desc);
+                        resourceRegistry.attach(router, resourceId, desc);
                     }).throw('no restful service is defined!');
                 });
 
                 it('资源定义错：未定义任何rest服务', function () {
                     desc.rests = [];
                     expect(function () {
-                        resourceDescriptor.attach(router, resourceId, desc);
+                        resourceRegistry.attach(router, resourceId, desc);
                     }).throw('no restful service is defined!');
                 });
 
                 it('加载资源时将导致该资源的所有服务被加载', function () {
                     var attachSpy = sinon.spy();
                     stubs['./RestDescriptor'] = {attach: attachSpy};
-                    resourceDescriptor = proxyquire('../netup/rests/ResourceRegistry', stubs);
+                    resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
 
-                    var resource = resourceDescriptor.attach(router, resourceId, desc);
+                    var resource = resourceRegistry.attach(router, resourceId, desc);
                     expect(attachSpy).calledWith(router, resource, url, restDesc);
                 });
             });

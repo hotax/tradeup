@@ -15,7 +15,7 @@ var logger = log4js.getLogger();
 
 module.exports.begin = function (base) {
     var baseDir = base || __dirname;
-    var __resourceRegistry, __resources;
+    var __resourceRegistry;
     var viewEngine;
 
     initappobject();
@@ -28,13 +28,17 @@ module.exports.begin = function (base) {
         return this;
     };
     this.setResources = function (resourceRegistry, resources) {
-        __resourceRegistry = resourceRegistry;
-        __resources = resources;
+        __resourceRegistry = {
+            attachTo: function (router) {
+                for (var id in resources)
+                    resourceRegistry.attach(router, id, resources[id]);
+            }
+        };
         return this;
     };
     this.end = function () {
         if (viewEngine) viewEngine.attachTo(app);
-        if (__resourceRegistry) for (var id in __resources) __resourceRegistry.attach(app, id, __resources[id]);
+        if (__resourceRegistry) __resourceRegistry.attachTo(app);
         return app;
     };
     this.run = function (portNum, callback) {
