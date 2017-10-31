@@ -709,7 +709,7 @@ describe('tradup', function () {
                     var attachSpy = sinon.spy();
                     var setTransitionsFinderSpy = sinon.spy();
                     var resourceRegistry = {
-                        setTransitionFinder: setTransitionsFinderSpy,
+                        setTransitionsFinder: setTransitionsFinderSpy,
                         attach: attachSpy
                     };
 
