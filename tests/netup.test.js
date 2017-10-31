@@ -97,7 +97,7 @@ describe('tradup', function () {
             var rest;
 
             beforeEach(function () {
-                restDescriptor = require('../netup/rests/ResourceDescriptor');
+                restDescriptor = require('../netup/rests/ResourceRegistry');
                 requestAgent = require('supertest');
                 app = require('express')();
                 app.use(require('body-parser').json());
@@ -473,7 +473,7 @@ describe('tradup', function () {
 
                     attachSpy = sinon.spy();
                     stubs['./RestDescriptor'] = {attach: attachSpy};
-                    resourceDescriptor = proxyquire('../netup/rests/ResourceDescriptor', stubs);
+                    resourceDescriptor = proxyquire('../netup/rests/ResourceRegistry', stubs);
                 });
 
                 it('一个资源应具有寻址性，必须定义url模板', function () {
@@ -559,7 +559,7 @@ describe('tradup', function () {
                     getTransitionUrlStub.withArgs('fee', context, req).returns(feeUrl);
                     getTransitionUrlStub.withArgs('fuu', context, req).returns(fuuUrl);
 
-                    resourceDescriptor = proxyquire('../netup/rests/ResourceDescriptor', stubs);
+                    resourceDescriptor = proxyquire('../netup/rests/ResourceRegistry', stubs);
                     var resource = resourceDescriptor.attach(router, resourceId, desc);
                     resource.getTransitionUrl = getTransitionUrlStub;
 
@@ -590,7 +590,7 @@ describe('tradup', function () {
                 it('加载资源时将导致该资源的所有服务被加载', function () {
                     var attachSpy = sinon.spy();
                     stubs['./RestDescriptor'] = {attach: attachSpy};
-                    resourceDescriptor = proxyquire('../netup/rests/ResourceDescriptor', stubs);
+                    resourceDescriptor = proxyquire('../netup/rests/ResourceRegistry', stubs);
 
                     var resource = resourceDescriptor.attach(router, resourceId, desc);
                     expect(attachSpy).calledWith(router, resource, url, restDesc);

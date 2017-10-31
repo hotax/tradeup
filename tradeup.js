@@ -4,7 +4,7 @@
 const path = require('path'),
     restDir = path.join(__dirname, './server/rests'),
     resourceDescriptors = require('./netup/rests/DirectoryResourceDescriptorsLoader').loadFrom(restDir),
-    resourceRegistry = require('./netup/rests/ResourceDescriptor'),
+    resourceRegistry = require('./netup/rests/ResourceRegistry'),
     connectDb = require('./netup/db/mongoDb/ConnectMongoDb'),
     appBuilder = require('./netup/express/AppBuilder');
 
