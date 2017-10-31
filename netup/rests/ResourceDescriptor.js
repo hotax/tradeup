@@ -3,6 +3,7 @@
  */
 const Promise = require('bluebird'),
     restDescriptor = require('./RestDescriptor'),
+    transGraph = require('./StateTransitionsGraph'),
     pathToRegexp = require('path-to-regexp');
 
 var __resources = {};
@@ -22,7 +23,7 @@ module.exports = {
                     if (params[name]) continue;
                     if (req && req.params) params[name] = req.params[name];
                     if (params[name]) continue;
-                    if(req.query) params[name] = req.query[name];
+                    if (req.query) params[name] = req.query[name];
                 }
 
                 if (resourceDesc.transitions && resourceDesc.transitions[fromResourceId]) {
@@ -40,11 +41,20 @@ module.exports = {
                 var path = urlPattern.toPath(params);
                 return path;
             },
-            getTransitionUrl:function (destResourceId, context, req) {
+            getTransitionUrl: function (destResourceId, context, req) {
                 return __resources[destResourceId].getUrl(resourceId, context, req);
             },
-            getLinks:function (req, context) {
-                return [];
+            getLinks: function (context, req) {
+                var me = this;
+                return transGraph.findTransitions(resourceId, context, req)
+                    .then(function (trans) {
+                        var links = [];
+                        for (var key in trans) {
+                            var href = me.getTransitionUrl(trans[key], context, req);
+                            links.push({rel: key, href: href});
+                        }
+                        return links;
+                    })
             },
             attachTo: function (router) {
                 function parseUrlPattern(urlPattern) {

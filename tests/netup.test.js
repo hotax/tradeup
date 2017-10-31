@@ -543,6 +543,36 @@ describe('tradup', function () {
                     expect(fooResource.getTransitionUrl('fee')).eql('/url/fee');
                 });
 
+                it('获得当前资源状态下的迁移链接列表', function (done) {
+                    var req = {reg: 'any request'};
+                    var context = {context: 'any context'};
+                    var transitions = {
+                        rel1: 'fee',
+                        rel2: 'fuu'
+                    }
+                    var findTransitionsStub = createPromiseStub([resourceId, context, req], [transitions]);
+                    stubs['./StateTransitionsGraph'] = {findTransitions: findTransitionsStub};
+
+                    var feeUrl = '/url/fee';
+                    var fuuUrl = '/url/fuu';
+                    var getTransitionUrlStub = sinon.stub();
+                    getTransitionUrlStub.withArgs('fee', context, req).returns(feeUrl);
+                    getTransitionUrlStub.withArgs('fuu', context, req).returns(fuuUrl);
+
+                    resourceDescriptor = proxyquire('../netup/rests/ResourceDescriptor', stubs);
+                    var resource = resourceDescriptor.attach(router, resourceId, desc);
+                    resource.getTransitionUrl = getTransitionUrlStub;
+
+                    return resource.getLinks(context, req)
+                        .then(function (data) {
+                            expect(data).eql([
+                                {rel: 'rel1', href: feeUrl},
+                                {rel: 'rel2', href: fuuUrl}
+                            ]);
+                            done();
+                        })
+                });
+
                 it('资源定义错：未定义任何rest服务', function () {
                     delete desc.rests;
                     expect(function () {
@@ -728,13 +758,6 @@ describe('tradup', function () {
                         process.env.PORT = port;
                         runAndCheckServer(null, 'http://localhost:' + port + '/staticResource.json', done);
                     });
-
-                    /*it('开发人员可以通过设置资源注册器加载资源', function (done) {
-                     var restDir = path.join(__dirname, './data/rests');
-                     var resourceRegistry = require('../netup/rests/ResourcesRestry')(restDir);
-                     appBuilder.setRests(resourceRegistry).end();
-                     runAndCheckServer(port, 'http://localhost:' + port + '/rests/foo', done);
-                     });*/
                 });
             });
         });
