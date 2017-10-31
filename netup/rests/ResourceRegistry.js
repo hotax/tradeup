@@ -3,11 +3,15 @@
  */
 const Promise = require('bluebird'),
     restDescriptor = require('./RestDescriptor'),
-    transGraph = require('./StateTransitionsGraph'),
     pathToRegexp = require('path-to-regexp');
 
 var __resources = {};
+var __transGraph;
+
 module.exports = {
+    setTransitionsFinder: function (finder) {
+        __transGraph = finder;
+    },
     attach: function (router, resourceId, resourceDesc) {
         if (!resourceDesc.url) throw 'a url must be defined!';
         if (!resourceDesc.rests || resourceDesc.rests.length < 1) throw 'no restful service is defined!';
@@ -46,7 +50,7 @@ module.exports = {
             },
             getLinks: function (context, req) {
                 var me = this;
-                return transGraph.findTransitions(resourceId, context, req)
+                return __transGraph.findTransitions(resourceId, context, req)
                     .then(function (trans) {
                         var links = [];
                         for (var key in trans) {

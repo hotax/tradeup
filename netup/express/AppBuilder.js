@@ -27,7 +27,9 @@ module.exports.begin = function (base) {
         viewEngine = engine;
         return this;
     };
-    this.setResources = function (resourceRegistry, resources) {
+    this.setResources = function (resourceRegistry, resources, transGraph) {
+        resourceRegistry.setTransitionFinder(transGraph);
+        transGraph.setResourcesNameList(resourceRegistry);
         __resourceRegistry = {
             attachTo: function (router) {
                 for (var id in resources)
