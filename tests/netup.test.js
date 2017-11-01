@@ -353,7 +353,7 @@ describe('tradup', function () {
                         });
 
                         it('最小的集合表述', function (done) {
-                            getLinksStub.returns([]);
+                            getLinksStub.resolves([]);
                             currentResource.getLinks = getLinksStub;
 
                             restDescriptor.attach(app, currentResource, url, desc);
@@ -371,10 +371,10 @@ describe('tradup', function () {
                             var link1 = {rel: 'link1', href: 'url1'};
                             var link2 = {rel: 'link2', href: 'url2'};
                             var expectedLinks = [link1, link2];
-                            getLinksStub.callsFake(function (req, context) {
+                            getLinksStub.callsFake(function (context, req) {
                                 expect(context).eql(dataToRepresent.data);
                                 expect(req.originalUrl).eql(url);
-                                return expectedLinks;
+                                return Promise.resolve(expectedLinks);
                             });
                             currentResource.getLinks = getLinksStub;
                             restDescriptor.attach(app, currentResource, url, desc);
@@ -398,10 +398,10 @@ describe('tradup', function () {
                             var link1 = {rel: 'link1', href: 'url1'};
                             var link2 = {rel: 'link2', href: 'url2'};
                             var expectedLinks = [link1, link2];
-                            getLinksStub.callsFake(function (req, context) {
+                            getLinksStub.callsFake(function (context, req) {
                                 expect(context).eql(dataToRepresent.data);
                                 expect(req.originalUrl).eql(url);
-                                return expectedLinks;
+                                return Promise.resolve(expectedLinks);
                             });
                             currentResource.getLinks = getLinksStub;
 
@@ -499,6 +499,16 @@ describe('tradup', function () {
                     it('无路径变量', function () {
                         resource = resourceRegistry.attach(router, resourceId, desc);
                         expect(resource.getUrl()).eql(url);
+                    });
+
+                    it('发布者可以通过设置环境变量HOST决定URL中是否包含BaseUrl', function () {
+                        process.env.HOST = 'www.hotex.com';
+                        process.env.PORT = 34211;
+                        resource = resourceRegistry.attach(router, resourceId, desc);
+                        expect(resource.getUrl()).eql('http://www.hotex.com:34211' + url);
+
+                        delete process.env.HOST;
+                        delete process.env.PORT;
                     });
 
                     it('未定义迁移，缺省方式从上下文中取同路径变量名相同的属性值', function () {

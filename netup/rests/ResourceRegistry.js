@@ -2,6 +2,7 @@
  * Created by clx on 2017/10/13.
  */
 const Promise = require('bluebird'),
+    URL = require('url'),
     restDescriptor = require('./RestDescriptor'),
     pathToRegexp = require('path-to-regexp');
 
@@ -19,7 +20,6 @@ module.exports = {
         var urlPattern;
         var resource = {
             getUrl: function (fromResourceId, context, req) {
-                if (urlPattern.keys.length === 0) return urlPattern.toPath();
                 var params = {};
                 for (var i = 0; i < urlPattern.keys.length; i++) {
                     var name = urlPattern.keys[i].name;
@@ -43,6 +43,10 @@ module.exports = {
                 }
 
                 var path = urlPattern.toPath(params);
+                if(process.env.HOST){
+                    path = URL.resolve('http://' + process.env.HOST + ':' + process.env.PORT, path);
+                }
+
                 return path;
             },
             getTransitionUrl: function (destResourceId, context, req) {
