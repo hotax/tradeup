@@ -29,10 +29,6 @@ module.exports = {
                                     href: req.originalUrl
                                 }
                             };
-                            var links = currentResource.getLinks(req, data.data);
-                            if (links.length > 0) {
-                                representation.collection.links = links;
-                            }
                             if (data.data.items.length > 0) {
                                 representation.collection.items = [];
                                 data.data.items.forEach(function (itemData) {
@@ -54,7 +50,14 @@ module.exports = {
                                     representation.collection.items.push(item);
                                 });
                             }
-                            res.set('Content-Type', MEDIA_TYPE_COLLECTION_JSON);
+                            return currentResource.getLinks(data.data, req)
+                                .then(function (links) {
+                                    if (links.length > 0) {
+                                        representation.collection.links = links;
+                                    }
+                                    res.set('Content-Type', MEDIA_TYPE_COLLECTION_JSON);
+                                    return res.status(200).json(representation);
+                                });
                         }
                     } else {
                         representation = data;
