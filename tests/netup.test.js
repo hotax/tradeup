@@ -588,24 +588,16 @@ describe('tradup', function () {
                 var requestAgent, app, request;
                 var url, desc, currentResource;
                 var restDescriptor;
-                var dataToRepresent;
 
                 beforeEach(function () {
                     url = '/rests/foo';
-                    dataToRepresent = {data: 'any data'};
                     var bodyParser = require('body-parser');
                     requestAgent = require('supertest');
                     app = require('express')();
                     request = requestAgent(app);
                     app.use(bodyParser.json());
 
-                    desc = {
-                        method: 'gEt',
-                        handler: function (req, res) {
-                            return dataToRepresent;
-                        },
-                    };
-
+                    err = "any error ...."
                     currentResource = {
                         getUrl: function () {
                         },
@@ -620,24 +612,31 @@ describe('tradup', function () {
 
                 describe('入口服务', function () {
                     beforeEach(function () {
-                    });
-
-                    it('正确响应', function (done) {
                         desc = {
                             type: 'entry'
                         };
+                        restDescriptor.attach(app, currentResource, url, desc);
+                    });
+
+                    it('正确响应', function (done) {
                         var expectedLinks = [
                             {rel: 'rel1', href: '/href1'},
                             {rel: 'rel2', href: '/href2'}
                         ];
                         currentResource.getLinks.returns(Promise.resolve(expectedLinks));
-                        restDescriptor.attach(app, currentResource, url, desc);
+
                         request.get(url)
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
                             .expect(200, {
                                 links: expectedLinks
                             }, done);
-                    })
+                    });
+
+                    it('未知错误返回500内部错', function (done) {
+                        currentResource.getLinks.returns(Promise.reject(err));
+                        request.get(url)
+                            .expect(500, err, done);
+                    });
                 });
 
                 describe('查询服务', function () {
@@ -720,7 +719,7 @@ describe('tradup', function () {
                         searchStub.returns(Promise.reject(err));
                         request.get(url)
                             .expect(500, err, done);
-                    })
+                    });
                 });
 
                 describe('创建资源服务', function () {
@@ -728,15 +727,16 @@ describe('tradup', function () {
                     beforeEach(function () {
                         targetResourceId = "fuuuuuu";
                         createStub = sinon.stub();
-                    });
-
-                    it('正确响应', function (done) {
                         desc = {
                             type: 'create',
                             target: targetResourceId,
                             create: createStub
                         };
 
+                        restDescriptor.attach(app, currentResource, url, desc);
+                    });
+
+                    it('正确响应', function (done) {
                         reqBody = {foo: "any request data used to create object"};
                         objCreated = {
                             __id: 'fooid',
@@ -763,8 +763,6 @@ describe('tradup', function () {
                             return urlToCreatedObject;
                         });
 
-                        restDescriptor.attach(app, currentResource, url, desc);
-
                         request.post(url)
                             .send(reqBody)
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
@@ -775,6 +773,13 @@ describe('tradup', function () {
                                 links: expectedLinks
                             }, done);
                     });
+
+                    it('未知错误返回500内部错', function (done) {
+                        createStub.returns(Promise.reject(err));
+                        request.post(url)
+                            .send(reqBody)
+                            .expect(500, err, done);
+                    });
                 });
 
                 describe('读取资源状态服务', function () {
@@ -782,14 +787,15 @@ describe('tradup', function () {
                     beforeEach(function () {
                         version = "123456";
                         handlerStub = sinon.stub();
-                    });
-
-                    it('正确响应', function (done) {
                         desc = {
                             type: 'read',
                             handler: handlerStub
                         };
 
+                        restDescriptor.attach(app, currentResource, url, desc);
+                    });
+
+                    it('正确响应', function (done) {
                         objRead = {
                             id: 'fooid',
                             foo: 'foo',
@@ -809,8 +815,6 @@ describe('tradup', function () {
                                 return Promise.resolve(expectedLinks);
                             });
 
-                        restDescriptor.attach(app, currentResource, url, desc);
-
                         request.get(url)
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
                             .expect('ETag', version)
@@ -819,6 +823,12 @@ describe('tradup', function () {
                                 object: objRead,
                                 links: expectedLinks
                             }, done);
+                    });
+
+                    it('未知错误返回500内部错', function (done) {
+                        handlerStub.returns(Promise.reject(err));
+                        request.get(url)
+                            .expect(500, err, done);
                     });
                 });
             });

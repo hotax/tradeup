@@ -1,8 +1,6 @@
 /**
  * Created by clx on 2017/10/13.
  */
-const Promise = require('bluebird');
-const MEDIA_TYPE_COLLECTION_JSON = 'application/vnd.collection+json';
 const MEDIA_TYPE = 'application/vnd.hotex.com+json';
 
 const handlerMap = {
@@ -14,7 +12,10 @@ const handlerMap = {
                     return res.status(200).json({
                         links: links
                     });
-                });
+                })
+                .catch(function (err) {
+                    return res.status(500).send(err);
+                })
         });
     },
     create: function (router, context, urlPattern, restDesc) {
@@ -34,6 +35,9 @@ const handlerMap = {
                         object: targetObject,
                         links: links
                     });
+                })
+                .catch(function (err) {
+                    return res.status(500).send(err);
                 })
         });
     },
@@ -89,7 +93,10 @@ const handlerMap = {
                     representation.links = links;
                     res.set('Content-Type', MEDIA_TYPE);
                     return res.status(200).json(representation);
-                });
+                })
+                .catch(function (err) {
+                    return res.status(500).send(err);
+                })
         });
     }
 };
