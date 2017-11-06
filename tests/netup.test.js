@@ -41,197 +41,361 @@ describe('tradup', function () {
             });
 
             describe('specification', function () {
-                it('新增', function () {
-                    var specifications = require('../server/data/Specifications');
-                    var data = {
-                        code: 'foo',    //编码
-                        name: 'foo specification',    //名称
-                        grey: {     //胚布
-                            yarn: { //纱支
-                                warp: {val: [20, 30, 40], unit: 'S'},    //径向
-                                weft: {val: [35]}     //weixiang
+                var specifications, adata;
+                var SpecSchema;
+
+                beforeEach(function () {
+                    SpecSchema = require('../server/data/models/specification');
+                    specifications = require('../server/data/Specifications');
+                    adata = {
+                        "code": "1234",
+                        "name": "foo",
+                        "desc": "this is foo specification",
+                        "constructure": "a kind of constructure",
+                        "state": 0,
+                        "grey": {
+                            "yarn": {
+                                "warp": {"value": [20, 30, 40], "unit": "s"},
+                                "weft": {"value": [20, 30]}
                             },
-                            dnsty: {
-                                warp: {val: [100]},
-                                weft: {}
+                            "dnsty": {
+                                "warp": {"value": [20]},
+                                "weft": {"value": [20, 30, 40], "unit": "ss"}
                             },
-                            width: 28.63,
-                            GSM: 45.68
+                            "width": 45,
+                            "GSM": 28
                         },
-                        product: {
-                            yarn: {
-                                dnstyWarp: {val: [20, 30, 40], unit: 'S'},
-                                dnstyWeft: {val: [20, 30, 40], unit: 'S'}
+                        "product": {
+                            "yarn": {
+                                "warp": {"value": [20, 30, 40], "unit": "s"},
+                                "weft": {"value": [20, 30]}
                             },
-                            dnsty: {
-                                BW: {
-                                    warp: {val: [20, 30, 40], unit: 'S'},
-                                    weft: {val: [20, 30, 40], unit: 'S'}
-                                },
-                                AW: {
-                                    warp: {val: [20, 30, 40], unit: 'S'},
-                                    weft: {val: [20, 30, 40], unit: 'S'}
-                                },
+                            "dnstyBW": {
+                                "warp": {"value": [20]},
+                                "weft": {"value": [20, 30, 40], "unit": "ss"}
                             },
-                            width: 20,
-                            GSM: 50
-                        },
-                        desc: 'desc of foo',   //描述
-                        constructure: 'constructure of foo',    //组织
-                        state: 0,
-                        //author: ObjectId,
-                        //createdDate: {type: Date, default: Date.now, required: true},
-                        //modifiedDate: Date
-                    };
-                    return specifications.add(data)
-                        .then(function (obj) {
-                            expect(obj).not.null;
+                            "dnstyAW": {
+                                "warp": {"value": [20]},
+                                "weft": {"value": [20, 30, 40], "unit": "ss"}
+                            },
+                            "width": 85,
+                            "GSM": 50
+                        }
+                    }
+                });
+
+                describe('表达式', function () {
+                    var model;
+
+                    describe('纱支值表达式', function () {
+                        beforeEach(function () {
+                            adata.product.yarn.warp = {};
+                            model = new SpecSchema(adata);
                         });
+
+                        it('纱支值表达式错：未以“[”开头', function () {
+                            expect(function () {
+                                model.product.yarn.warp.desc = "20,30,40unit";
+                            }).throw('纱支值表达式(20,30,40unit)错：未以“[”开头');
+                        });
+
+                        it('纱支值表达式错：未包含“]”', function () {
+                            expect(function () {
+                                model.product.yarn.warp.desc = "[20,30,40unit";
+                            }).throw('纱支值表达式([20,30,40unit)错：未包含“]”');
+                        });
+
+                        it('纱支值表达式错：包含多个“]”', function () {
+                            expect(function () {
+                                model.product.yarn.warp.desc = "[20,30,40]un]it";
+                            }).throw('纱支值表达式([20,30,40]un]it)错：包含多个“]”');
+                        });
+
+                        it('纱支值表达式错：包含多个“]”', function () {
+                            expect(function () {
+                                model.product.yarn.warp.desc = "[20.45,30a,40]unit";
+                            }).throw('纱支值表达式([20.45,30a,40]unit)错：纱支数非数字');
+                        });
+
+                        it('用纱支值表达式赋值', function () {
+                            model.product.yarn.warp.desc = "[20.45,30,40]unit";
+                            expect(model.product.yarn.warp.value.toObject()).eql([20.45, 30, 40]);
+                            expect(model.product.yarn.warp.unit).eql('unit');
+                        });
+
+                        it('用纱支值表达式赋值 - 无单位', function () {
+                            model.product.yarn.warp.desc = "[20.45,30,40]";
+                            expect(model.product.yarn.warp.value.toObject()).eql([20.45, 30, 40]);
+                            expect(model.product.yarn.warp.unit).undefined;
+                        });
+                    });
+
+                    describe('径向纬向纱支表达式', function () {
+                        beforeEach(function () {
+                            adata.product.yarn = {};
+                            model = new SpecSchema(adata);
+                        });
+
+                        it('用纱支值表达式赋值', function () {
+                            model.product.yarn.desc = {
+                                warp: "[20,40,60]aa",
+                                weft: "[100]",
+                            };
+                            expect(model.product.yarn.warp.value.toObject()).eql([20, 40, 60]);
+                            expect(model.product.yarn.warp.unit).eql('aa');
+                            expect(model.product.yarn.weft.value.toObject()).eql([100]);
+                            expect(model.product.yarn.weft.unit).undefined;
+                        });
+                    });
+                });
+
+                it('新增', function () {
+                    var dataToAdd = {
+                        "code": "1234",
+                        "name": "foo",
+                        "desc": "this is foo specification",
+                        "constructure": "a kind of constructure",
+                        "grey": {
+                            "yarn": {
+                                "warp": "[20,30,40]s",
+                                "weft": "[20,30]"
+                            },
+                            "dnsty": {
+                                "warp": "[20]",
+                                "weft": "[20,30,40]ss"
+                            },
+                            "width": 45,
+                            "GSM": 28
+                        },
+                        "product": {
+                            "yarn": {
+                                "warp": "[20,30,40]s",
+                                "weft": "[20,30]"
+                            },
+                            "dnstyBW": {
+                                "warp": "[20]",
+                                "weft": "[20,30,40]ss"
+                            },
+                            "dnstyAW": {
+                                "warp": "[20]",
+                                "weft": "[20,30,40]ss"
+                            },
+                            "width": 85,
+                            "GSM": 50
+                        }
+                    }
+                    return specifications.add(dataToAdd)
+                        .then(function (obj) {
+                            expect(obj.id.length).eql(24);
+                            expect(obj.createDate).not.null;
+                            expect(obj.modifiedDate).not.null;
+                            expect(obj.__v).eql(0);
+
+                            delete obj.id;
+                            delete obj.createDate;
+                            delete obj.modifiedDate;
+                            delete obj.__v;
+
+                            expect(obj).eql(dataToAdd);
+                        });
+                });
+
+                it('读取', function () {
+                    var expectedData;
+                    return new SpecSchema(adata).save()
+                        .then(function (data) {
+                            expectedData = {
+                                id: data.id,
+                                code: data.code,
+                                name: data.name,
+                                desc: data.desc,
+                                constructure: data.constructure,
+                                grey: {
+                                    yarn: data.grey.yarn.desc,
+                                    dnsty: data.grey.dnsty.desc,
+                                    width: data.grey.width,
+                                    GSM: data.grey.GSM
+                                },
+                                product: {
+                                    yarn: data.product.yarn.desc,
+                                    dnstyBW: data.product.dnstyBW.desc,
+                                    dnstyAW: data.product.dnstyAW.desc,
+                                    width: data.product.width,
+                                    GSM: data.product.GSM
+                                },
+                                createDate: data.createDate,
+                                modifiedDate: data.modifiedDate,
+                                __v: data.__v
+                            };
+                            return specifications.findById(data.id);
+                        })
+                        .then(function (data) {
+                            expect(data).eql(expectedData);
+                        })
+                });
+
+                describe('搜索产品规格', function () {
+                    it('分页变量perpage非法', function () {
+                        return specifications.search({perpage: 'aaa'})
+                            .catch(function (data) {
+                                expect(data).eql({
+                                    code: 'InvalidCondition',
+                                    reason: '分页变量perpage非法'
+                                });
+                            })
+                    });
+
+                    it('分页变量page非法', function () {
+                        return SpecSchema.create([adata, adata, adata])
+                            .then(function () {
+                                return specifications.search({page: 'aaa'})
+                                    .catch(function (data) {
+                                        expect(data).eql({
+                                            code: 'InvalidCondition',
+                                            reason: '分页变量page非法'
+                                        });
+                                    })
+                            })
+                    });
+
+                    it('未指定任何查询条件', function () {
+                        var expectedData = {
+                            "items": [
+                                {
+                                    "code": "1234",
+                                    "desc": "this is foo specification",
+                                    "grey": {
+                                        "GSM": 28,
+                                        "dnsty": {
+                                            "warp": "[20]",
+                                            "weft": "[20,30,40]ss",
+                                        },
+                                        "width": 45,
+                                        "yarn": {
+                                            "warp": "[20,30,40]s",
+                                            "weft": "[20,30]",
+                                        }
+                                    },
+                                    "id": "59fc51c11db85e2efcd19cb0",
+                                    "name": "foo"
+                                }
+                            ],
+                            "page": 1,
+                            "perpage": 10,
+                            "total": 2
+                        };
+
+                        anotherData = {
+                            "code": "ffff",
+                            "name": "ffff",
+                            "desc": "this is foo specification",
+                            "constructure": "a kind of constructure",
+                            createDate: new Date(2017, 4, 10)
+                        };
+
+                        var model = new SpecSchema(anotherData);
+                        return model.save()
+                            .then(function (data) {
+                                model = new SpecSchema(adata)
+                                return model.save();
+                            })
+                            .then(function (data) {
+                                expectedData.items[0].id = data.id;
+                                expectedData.items[0].createDate = data.createDate;
+                                return specifications.search()
+                                    .then(function (obj) {
+                                        obj.items = [obj.items[0]];
+                                        expect(obj).eql(expectedData);
+                                    });
+                            })
+                    });
                 });
             })
         });
 
         describe('rests', function () {
-            var request, app, restDescriptor;
-            var requestAgent;
-            var rest;
+            var req, res, handler, RequestMock, ResponseMock;
 
             beforeEach(function () {
-                restDescriptor = require('../netup/rests/ResourceRegistry');
-                requestAgent = require('supertest');
-                app = require('express')();
-                app.use(require('body-parser').json());
-                request = requestAgent(app);
+                RequestMock = require('mock-express-request');
+                ResponseMock = require('mock-express-response');
             });
 
-            describe('可搜索的产品列表', function () {
-                xit('最新产品列表', function (done) {
-                    var dbData = {
+            describe('Home', function () {
+                it('服务入口', function () {
+                    handler = require('../server/rests/Home').rests[0].handler;
+                })
+            });
+
+            describe('搜索产品规格', function () {
+                it('搜索失败', function (done) {
+                    //var queryCondition = {conditions: 'any query conditions'};
+                    var result = {
+                        code: 'InvalidatedQuery',
+                        reason: '失败原因'
+                    };
+                    var searchStub = createPromiseStub([], null, result);
+                    stubs['../data/Specifications'] = {search: searchStub};
+                    var desc = proxyquire('../server/rests/ProductSearch', stubs);
+
+                    req = new RequestMock();
+
+                    desc.rests[0].search(req)
+                        .catch(function (err) {
+                            expect(err).eql(result);
+                            done();
+                        });
+                });
+
+                it('成功搜索', function (done) {
+                    var result = {
                         items: [
                             {
-                                _id: 'foo',
-                                code: '210001',
+                                id: 'abcdefg',
+                                code: '12345',
+                                name: 'foo',
+                                desc: 'desc of foo',
                                 grey: {
-                                    yarn: { //纱支
-                                        warp: {val: [100]},    //径向
-                                        weft: {val: [200, 300], unit: 'ss'}     //weixiang
+                                    yarn: {
+                                        warp: '[10, 20]ss',
+                                        weft: '[10]'
                                     },
                                     dnsty: {
-                                        warp: {val: [50]},
-                                        weft: {val: [60, 80, 100]}
+                                        warp: '[50, 80, 100]',
+                                        weft: '[40]pp'
                                     }
-                                },
-                                desc: 'the description of foo'
-                            },
-                            {
-                                _id: 'fee',
-                                code: '210020',
-                                grey: {
-                                    yarn: { //纱支
-                                        warp: {val: [90]},    //径向
-                                        weft: {val: [210, 310], unit: 'pp'}     //weixiang
-                                    },
-                                    dnsty: {
-                                        warp: {val: [58]},
-                                        weft: {val: [65, 85, 110]}
-                                    }
-                                },
-                                desc: 'the description of fee'
+                                }
                             }
                         ],
-                        partial: {
-                            start: 0,
-                            count: 3,
-                            total: 3
-                        }
-                    };
-                    var searchStub = createPromiseStub([{count: 10}], [dbData]);
-                    stubs['../data/Products'] = {search: searchStub};
-
-                    var result = {collection: 'any collection representation contents'};
-                    var convertStub = sinon.stub();
-                    convertStub.withArgs(dbData).returns(result);
-
-                    var parseStub = sinon.stub()
-                    stubs['../../netup/rests/CollectionJsonRepresentationBuilder'] = {
-                        parse: function () {
-                            return {convert: convertStub}
-                        },
+                        page: 1,
+                        perpage: 10,
+                        total: 200
                     };
 
+                    var searchStub = createPromiseStub([], [result]);
+                    stubs['../data/Specifications'] = {search: searchStub};
+                    var desc = proxyquire('../server/rests/ProductSearch', stubs);
+
+                    desc.rests[0].search()
+                        .then(function (data) {
+                            expect(data).eql(result);
+                            done();
+                        })
+                });
+
+                it('新增规格', function (done) {
+                    var postedData = {data: 'any specification to add'};
+
+                    var addStub = createPromiseStub([postedData], [postedData]);
+                    stubs['../data/Specifications'] = {add: addStub};
                     var desc = proxyquire('../server/rests/Products', stubs);
 
-
-                    var rest = restDescriptor.parse(proxyquire('../server/rests/Products', stubs));
-                    rest.attachTo(app);
-                    request.get('/rests/products/all/search?count=10')
-                        .expect(200, {
-                            collection: {
-                                version: '1.0',
-                                href: '/rests/products/all/search?count=10',
-                                links: [],
-                                items: [
-                                    {
-                                        href: '/rests/products/foo',
-                                        data: [
-                                            {
-                                                name: 'code',
-                                                value: '210001'
-                                            },
-                                            {
-                                                name: 'grey',
-                                                value: {
-                                                    yarn: { //纱支
-                                                        warp: {val: [100]},    //径向
-                                                        weft: {val: [200, 300], unit: 'ss'}     //weixiang
-                                                    },
-                                                    dnsty: {
-                                                        warp: {val: [50]},
-                                                        weft: {val: [60, 80, 100]}
-                                                    }
-                                                }
-                                            },
-                                            {
-                                                name: 'desc',
-                                                value: 'the description of foo'
-                                            }
-                                        ],
-                                        links: []
-                                    },
-                                    {
-                                        href: '/rests/products/fee',
-                                        data: [
-                                            {
-                                                name: 'code',
-                                                value: '210020'
-                                            },
-                                            {
-                                                name: 'grey',
-                                                value: {
-                                                    yarn: { //纱支
-                                                        warp: {val: [90]},    //径向
-                                                        weft: {val: [210, 310], unit: 'pp'}     //weixiang
-                                                    },
-                                                    dnsty: {
-                                                        warp: {val: [58]},
-                                                        weft: {val: [65, 85, 110]}
-                                                    }
-                                                }
-                                            },
-                                            {
-                                                name: 'desc',
-                                                value: 'the description of fee'
-                                            }
-                                        ],
-                                        links: []
-                                    }
-                                ],
-                                queries: [],
-                                template: {},
-                                error: {}
-                            }
-                        }, done);
-                })
+                    desc.rests[0].create(postedData)
+                        .then(function (data) {
+                            expect(data).eql(postedData);
+                            done();
+                        })
+                });
             });
         });
     });
@@ -245,6 +409,162 @@ describe('tradup', function () {
                     done();
                 });
             });
+
+            describe('分页查询工厂', function () {
+                var execStub, Schema, SchemaMock, paginatingQuery;
+                var dbdata, countNum, expectedData;
+                var options;
+
+                beforeEach(function () {
+                    execStub = sinon.stub();
+                    Schema = {
+                        find: function () {
+                        },
+                        select: function () {
+                        },
+                        limit: function () {
+                        },
+                        skip: function () {
+                        },
+                        sort: function () {
+                        },
+                        count: function () {
+                        },
+                        exec: execStub
+                    };
+                    SchemaMock = sinon.mock(Schema);
+
+                    dbdata = [{data: 'foo'}, {data: 'fee'}];
+                    countNum = 300;
+                    expectedData = {
+                        items: dbdata,
+                        total: countNum,
+                        page: 1,
+                        perpage: 10
+                    }
+
+                    execStub.returns(Promise.resolve(dbdata));
+                    execStub.onCall(0).returns(Promise.resolve(dbdata));
+                    execStub.onCall(1).returns(Promise.resolve(countNum));
+
+                    SchemaMock.expects('count').withArgs().once().returns(Schema);
+                    paginatingQuery = require('../netup/db/mongoDb/PaginatingQuery');
+
+                    options = {schema: Schema}
+                });
+
+                it('未指定查询选项', function () {
+                    expect(function () {
+                        paginatingQuery.query();
+                    }).throw('a query options with db schema should be given');
+                });
+
+                it('未指定查询集合', function () {
+                    expect(function () {
+                        paginatingQuery.query({});
+                    }).throw('a query options with db schema should be given');
+                });
+
+                it('查询指定集合', function (done) {
+                    SchemaMock.expects('find').withArgs({}).once().returns(Schema);
+                    SchemaMock.expects('limit').withArgs(10).once().returns(Schema);
+                    SchemaMock.expects('skip').withArgs(0).once().returns(Schema);
+
+                    paginatingQuery.query(options)
+                        .then(function (data) {
+                            expect(data).eql(expectedData);
+                            SchemaMock.verify();
+                            done();
+                        })
+                });
+
+                it('指定查询条件', function (done) {
+                    var queryconditions = {conditions: 'any query conditions'};
+                    SchemaMock.expects('find').withArgs(queryconditions).once().returns(Schema);
+                    SchemaMock.expects('limit').withArgs(10).once().returns(Schema);
+                    SchemaMock.expects('skip').withArgs(0).once().returns(Schema);
+
+                    options.conditions = queryconditions;
+                    paginatingQuery.query(options)
+                        .then(function (data) {
+                            expect(data).eql(expectedData);
+                            SchemaMock.verify();
+                            done();
+                        })
+                });
+
+                it('指定查询输出字段', function (done) {
+                    var select = 'f1 f2';
+                    SchemaMock.expects('select').withArgs(select).once().returns(Schema);
+                    SchemaMock.expects('find').withArgs({}).once().returns(Schema);
+                    SchemaMock.expects('limit').withArgs(10).once().returns(Schema);
+                    SchemaMock.expects('skip').withArgs(0).once().returns(Schema);
+
+                    options.select = select;
+                    paginatingQuery.query(options)
+                        .then(function (data) {
+                            expect(data).eql(expectedData);
+                            SchemaMock.verify();
+                            done();
+                        })
+                });
+
+                it('指定每页记录数', function (done) {
+                    var perpage = 5;
+                    SchemaMock.expects('find').withArgs({}).once().returns(Schema);
+                    SchemaMock.expects('limit').withArgs(perpage).once().returns(Schema);
+                    SchemaMock.expects('skip').withArgs(0).once().returns(Schema);
+
+                    options.perpage = perpage;
+                    expectedData.perpage = perpage;
+                    paginatingQuery.query(options)
+                        .then(function (data) {
+                            expect(data).eql(expectedData);
+                            SchemaMock.verify();
+                            done();
+                        })
+                });
+
+                it('指定当前页', function (done) {
+                    var page = 3;
+                    SchemaMock.expects('find').withArgs({}).once().returns(Schema);
+                    SchemaMock.expects('limit').withArgs().once().returns(Schema);
+                    SchemaMock.expects('skip').withArgs(20).once().returns(Schema);
+
+                    options.page = page;
+                    expectedData.page = page;
+
+                    paginatingQuery.query(options)
+                        .then(function (data) {
+                            expect(data).eql(expectedData);
+                            SchemaMock.verify();
+                            done();
+                        })
+                });
+
+                it('指定数据库返回数组中各项数据元素的处理方法', function (done) {
+                    SchemaMock.expects('find').withArgs({}).once().returns(Schema);
+                    SchemaMock.expects('limit').withArgs(10).once().returns(Schema);
+                    SchemaMock.expects('skip').withArgs(0).once().returns(Schema);
+
+                    var dataHandleStub = sinon.stub();
+                    dataHandleStub.withArgs(dbdata[0]).returns('foo');
+                    dataHandleStub.withArgs(dbdata[1]).returns('fee');
+
+                    options.handler = dataHandleStub;
+                    paginatingQuery.query(options)
+                        .then(function (data) {
+                            expect(data).eql({
+                                items: ['foo', 'fee'],
+                                total: countNum,
+                                page: 1,
+                                perpage: 10
+                            });
+                            SchemaMock.verify();
+                            done();
+                        })
+                })
+            })
         });
 
         describe('Restful', function () {
@@ -279,7 +599,6 @@ describe('tradup', function () {
                     request = requestAgent(app);
                     app.use(bodyParser.json());
 
-                    currentResource = {foo: 'current resource'};
                     desc = {
                         method: 'gEt',
                         handler: function (req, res) {
@@ -287,164 +606,220 @@ describe('tradup', function () {
                         },
                     };
 
+                    currentResource = {
+                        getUrl: function () {
+                        },
+                        getTransitionUrl: function () {
+                        },
+                        getLinks: function () {
+                        }
+                    };
+                    currentResource = sinon.stub(currentResource);
                     restDescriptor = require('../netup/rests/RestDescriptor');
                 });
 
-                it('服务定义错：未定义处理方法', function () {
-                    delete desc.handler;
-                    expect(function () {
+                describe('入口服务', function () {
+                    beforeEach(function () {
+                    });
+
+                    it('正确响应', function (done) {
+                        desc = {
+                            type: 'entry'
+                        };
+                        var expectedLinks = [
+                            {rel: 'rel1', href: '/href1'},
+                            {rel: 'rel2', href: '/href2'}
+                        ];
+                        currentResource.getLinks.returns(Promise.resolve(expectedLinks));
                         restDescriptor.attach(app, currentResource, url, desc);
-                    }).throw('a handler must be defined!');
-                });
-
-                it('GET方法未返回任何数据，返回500 Internal Server Error错', function (done) {
-                    desc.handler = function () {
-                    };
-                    restDescriptor.attach(app, currentResource, url, desc);
-                    request.get(url)
-                        .expect(500, done);
-                });
-
-                it('解析一个最基本的资源服务定义', function (done) {
-                    restDescriptor.attach(app, currentResource, url, desc);
-                    request.get(url)
-                        .expect(200, dataToRepresent, done);
-                });
-
-                it('资源服务处理返回一个Promise', function (done) {
-                    desc.handler = function (req, res) {
-                        var dbOperation = createPromiseStub([], [dataToRepresent]);
-                        return dbOperation();
-                    };
-                    restDescriptor.attach(app, currentResource, url, desc);
-                    request.get(url)
-                        .expect(200, dataToRepresent, done);
-                });
-
-                describe('表述资源状态', function () {
-                    var getTransitionUrlStub, refUrl, getLinksStub, links;
-
-                    describe('集合资源', function () {
-                        beforeEach(function () {
-                            refUrl = '/ref/url/foo';
-                            getTransitionUrlStub = sinon.stub();
-                            links = [{rel: 'link1'}, {rel: 'link2'}];
-                            getLinksStub = sinon.stub();
-
-                            dataToRepresent = {
-                                state: 'ok',
-                                data: {
-                                    items: []
-                                }
-                            };
-                            desc.handler = function (req, res) {
-                                return dataToRepresent;
-                            };
-                            desc.response = {
-                                ok: {
-                                    type: '@collection',
-                                    "@collection": {
-                                        type: 'fee'
-                                    }
-                                }
-                            }
-
-                            restDescriptor = require('../netup/rests/RestDescriptor');
-                        });
-
-                        it('最小的集合表述', function (done) {
-                            getLinksStub.resolves([]);
-                            currentResource.getLinks = getLinksStub;
-
-                            restDescriptor.attach(app, currentResource, url, desc);
-                            request.get(url)
-                                .expect('Content-Type', 'application/vnd.collection+json; charset=utf-8')
-                                .expect(200, {
-                                    collection: {
-                                        version: "1.0",
-                                        href: url
-                                    }
-                                }, done);
-                        });
-
-                        it('当前集合资源的links', function (done) {
-                            var link1 = {rel: 'link1', href: 'url1'};
-                            var link2 = {rel: 'link2', href: 'url2'};
-                            var expectedLinks = [link1, link2];
-                            getLinksStub.callsFake(function (context, req) {
-                                expect(context).eql(dataToRepresent.data);
-                                expect(req.originalUrl).eql(url);
-                                return Promise.resolve(expectedLinks);
-                            });
-                            currentResource.getLinks = getLinksStub;
-                            restDescriptor.attach(app, currentResource, url, desc);
-
-                            request.get(url)
-                                .expect('Content-Type', 'application/vnd.collection+json; charset=utf-8')
-                                .expect(200, {
-                                    collection: {
-                                        version: "1.0",
-                                        href: url,
-                                        links: expectedLinks
-                                    }
-                                }, done);
-                        });
-
-                        it('表述集合元素', function (done) {
-                            var element1 = {id: '001', field: 'field value 1'};
-                            var element2 = {id: '002', field: 'field value 2'};
-                            dataToRepresent.data = {items: [element1, element2]};
-
-                            var link1 = {rel: 'link1', href: 'url1'};
-                            var link2 = {rel: 'link2', href: 'url2'};
-                            var expectedLinks = [link1, link2];
-                            getLinksStub.callsFake(function (context, req) {
-                                expect(context).eql(dataToRepresent.data);
-                                expect(req.originalUrl).eql(url);
-                                return Promise.resolve(expectedLinks);
-                            });
-                            currentResource.getLinks = getLinksStub;
-
-                            var refElement1 = '/ref/element/001';
-                            var refElement2 = '/ref/element/002';
-                            getTransitionUrlStub.callsFake(function (targetResourceId, context, req) {
-                                expect(targetResourceId).eql('fee');
-                                expect(req.originalUrl).eql(url);
-                                var refurl;
-                                if (context === element1) refurl = refElement1;
-                                if (context === element2) refurl = refElement2;
-                                return refurl;
-                            });
-                            currentResource.getTransitionUrl = getTransitionUrlStub;
-
-                            restDescriptor.attach(app, currentResource, url, desc);
-
-                            request.get(url)
-                                .expect('Content-Type', 'application/vnd.collection+json; charset=utf-8')
-                                .expect(200, {
-                                    collection: {
-                                        version: "1.0",
-                                        href: url,
-                                        items: [
-                                            {
-                                                href: refElement1,
-                                                data: [
-                                                    {name: 'field', value: 'field value 1'}
-                                                ]
-                                            },
-                                            {
-                                                href: refElement2,
-                                                data: [
-                                                    {name: 'field', value: 'field value 2'}
-                                                ]
-                                            }
-                                        ],
-                                        links: expectedLinks
-                                    }
-                                }, done);
-                        });
-
+                        request.get(url)
+                            .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
+                            .expect(200, {
+                                links: expectedLinks
+                            }, done);
                     })
+                });
+
+                describe('查询服务', function () {
+                    var elementResourceId, reqQuery, searchStub, resultCollection;
+
+                    beforeEach(function () {
+                        reqQuery = {arg1: "aaa", arg2: 'bbb'};
+                        elementResourceId = "fuuuuuu";
+                        searchStub = sinon.stub();
+
+                        desc = {
+                            type: 'query',
+                            element: elementResourceId,
+                            search: searchStub
+                        };
+
+                        restDescriptor.attach(app, currentResource, url, desc);
+                    });
+
+                    it('正确响应', function (done) {
+                        var queryStr = "?arg1=aaa&arg2=bbb";
+                        var element1 = {id: '001', foo: 'foo 1', fee: 'fee 1'};
+                        var element2 = {id: '002', foo: 'foo 2', fee: 'fee 2'};
+                        resultCollection = {
+                            items: [element1, element2],
+                            perpage: 10,
+                            page: 1,
+                            total: 200
+                        };
+                        searchStub.withArgs(reqQuery).returns(Promise.resolve(resultCollection));
+
+                        var expectedLinks = [
+                            {rel: 'rel1', href: '/href1'},
+                            {rel: 'rel2', href: '/href2'}
+                        ];
+                        currentResource.getLinks
+                            .callsFake(function (context, req) {
+                                expect(context).eql(resultCollection);
+                                expect(req.originalUrl).eql(url + queryStr);
+                                return Promise.resolve(expectedLinks);
+                            });
+
+                        var refElement1 = '/ref/element/001';
+                        var refElement2 = '/ref/element/002';
+                        currentResource.getTransitionUrl.callsFake(function (targetResourceId, context, req) {
+                            expect(targetResourceId).eql(elementResourceId);
+                            expect(req.originalUrl).eql(url + queryStr);
+                            var refurl;
+                            if (context === element1) refurl = refElement1;
+                            if (context === element2) refurl = refElement2;
+                            return refurl;
+                        });
+
+                        request.get(url)
+                            .query(reqQuery)
+                            .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
+                            .expect(200, {
+                                collection: {
+                                    self: url + queryStr,
+                                    items: [
+                                        {
+                                            href: refElement1,
+                                            data: {foo: 'foo 1', fee: 'fee 1'}
+                                        },
+                                        {
+                                            href: refElement2,
+                                            data: {foo: 'foo 2', fee: 'fee 2'}
+                                        }
+                                    ],
+                                    perpage: 10,
+                                    page: 1,
+                                    total: 200
+                                },
+                                links: expectedLinks
+                            }, done);
+                    });
+
+                    it('未知错误返回500内部错', function (done) {
+                        err = "any error ...."
+                        searchStub.returns(Promise.reject(err));
+                        request.get(url)
+                            .expect(500, err, done);
+                    })
+                });
+
+                describe('创建资源服务', function () {
+                    var targetResourceId, reqBody, createStub, objCreated;
+                    beforeEach(function () {
+                        targetResourceId = "fuuuuuu";
+                        createStub = sinon.stub();
+                    });
+
+                    it('正确响应', function (done) {
+                        desc = {
+                            type: 'create',
+                            target: targetResourceId,
+                            create: createStub
+                        };
+
+                        reqBody = {foo: "any request data used to create object"};
+                        objCreated = {
+                            __id: 'fooid',
+                            foo: 'foo',
+                            fee: 'fee'
+                        };
+                        createStub.withArgs(reqBody).returns(Promise.resolve(objCreated));
+
+                        var expectedLinks = [
+                            {rel: 'rel1', href: '/href1'},
+                            {rel: 'rel2', href: '/href2'}
+                        ];
+                        currentResource.getLinks
+                            .callsFake(function (context, req) {
+                                expect(context).eql(objCreated);
+                                expect(req.originalUrl).eql(url);
+                                return Promise.resolve(expectedLinks);
+                            });
+                        var urlToCreatedObject = "/url/to/created/obj";
+                        currentResource.getTransitionUrl.callsFake(function (target, context, req) {
+                            expect(target).eql(targetResourceId);
+                            expect(context).eql(objCreated);
+                            expect(req.originalUrl).eql(url);
+                            return urlToCreatedObject;
+                        });
+
+                        restDescriptor.attach(app, currentResource, url, desc);
+
+                        request.post(url)
+                            .send(reqBody)
+                            .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
+                            .expect('Location', urlToCreatedObject)
+                            .expect(201, {
+                                href: urlToCreatedObject,
+                                object: objCreated,
+                                links: expectedLinks
+                            }, done);
+                    });
+                });
+
+                describe('读取资源状态服务', function () {
+                    var handlerStub, objRead, version;
+                    beforeEach(function () {
+                        version = "123456";
+                        handlerStub = sinon.stub();
+                    });
+
+                    it('正确响应', function (done) {
+                        desc = {
+                            type: 'read',
+                            handler: handlerStub
+                        };
+
+                        objRead = {
+                            id: 'fooid',
+                            foo: 'foo',
+                            fee: 'fee',
+                            __v: version
+                        };
+                        handlerStub.returns(Promise.resolve(objRead));
+
+                        var expectedLinks = [
+                            {rel: 'rel1', href: '/href1'},
+                            {rel: 'rel2', href: '/href2'}
+                        ];
+                        currentResource.getLinks
+                            .callsFake(function (context, req) {
+                                expect(context).eql(objRead);
+                                expect(req.originalUrl).eql(url);
+                                return Promise.resolve(expectedLinks);
+                            });
+
+                        restDescriptor.attach(app, currentResource, url, desc);
+
+                        request.get(url)
+                            .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
+                            .expect('ETag', version)
+                            .expect(200, {
+                                self: url,
+                                object: objRead,
+                                links: expectedLinks
+                            }, done);
+                    });
                 });
             });
 
@@ -785,5 +1160,6 @@ describe('tradup', function () {
             });
         });
     });
-});
+})
+;
 

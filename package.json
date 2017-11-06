@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
+    "chai-as-promised": "^7.1.1",
     "chai-xml": "^0.3.1",
     "mocha": "^3.1.2",
     "mocha-mongoose": "^1.2.0",

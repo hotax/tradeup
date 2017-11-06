@@ -7,6 +7,22 @@ module.exports = {
     setResourcesNameList: function (nameList) {
     },
     findTransitions: function (resourceId, context, req) {
-        return Promise.resolve([]);
+        var trans = {
+            Home: {
+                "search specifications": "ProductSearch",
+                "add specification": "Products"
+            },
+            ProductSearch: {
+                self: "ProductSearch",
+                add: 'Products'
+            },
+            Product: {
+                self: "Product",
+                edit: 'Product',
+                delete: 'Product',
+                search: 'ProductSearch'
+            }
+        };
+        return Promise.resolve(trans[resourceId]);
     }
 }

@@ -3,69 +3,101 @@
  */
 const Promise = require('bluebird');
 const MEDIA_TYPE_COLLECTION_JSON = 'application/vnd.collection+json';
+const MEDIA_TYPE = 'application/vnd.hotex.com+json';
 
-module.exports = {
-    attach: function (router, currentResource, urlPattern, restDesc) {
-        if (!restDesc.handler) throw  'a handler must be defined!';
-        /*if (!restDesc.response)
-         throw 'response for resource ' + resourceId + ' ' + restDesc.method.toUpperCase()
-         + ' service must be defined!';*/
-        router[restDesc.method.toLowerCase()](urlPattern, function (req, res) {
-            var data = restDesc.handler(req, res);
-            if (!data) return res.status(500).end();
-
-            var representation;
-            return Promise.resolve(data)
+const handlerMap = {
+    entry: function (router, context, urlPattern, restDesc) {
+        return router.get(urlPattern, function (req, res) {
+            return context.getLinks()
+                .then(function (links) {
+                    res.set('Content-Type', MEDIA_TYPE);
+                    return res.status(200).json({
+                        links: links
+                    });
+                });
+        });
+    },
+    create: function (router, context, urlPattern, restDesc) {
+        return router.post(urlPattern, function (req, res) {
+            var urlToCreatedResource, targetObject;
+            return restDesc.create(req.body)
                 .then(function (data) {
-                    var responseDesc = restDesc.response;
-                    if (responseDesc) {
-                        var responseOkDesc = responseDesc.ok;
-                        if (responseOkDesc.type === '@collection') {
-                            var collectionDesc = responseOkDesc['@collection'];
-                            if (!collectionDesc.id) collectionDesc.id = 'id';
-                            representation = {
-                                collection: {
-                                    version: "1.0",
-                                    href: req.originalUrl
-                                }
-                            };
-                            if (data.data.items.length > 0) {
-                                representation.collection.items = [];
-                                data.data.items.forEach(function (itemData) {
-                                    var item = {
-                                        data: []
-                                    };
-                                    var properties = [];
-                                    for (var property in itemData) {
-                                        if (property === collectionDesc.id) {
-                                            item.href = currentResource.getTransitionUrl(collectionDesc.type, itemData, req);
-                                        } else {
-                                            properties.push({
-                                                name: property,
-                                                value: itemData[property]
-                                            });
-                                        }
-                                    }
-                                    item.data = properties;
-                                    representation.collection.items.push(item);
-                                });
-                            }
-                            return currentResource.getLinks(data.data, req)
-                                .then(function (links) {
-                                    if (links.length > 0) {
-                                        representation.collection.links = links;
-                                    }
-                                    res.set('Content-Type', MEDIA_TYPE_COLLECTION_JSON);
-                                    return res.status(200).json(representation);
-                                });
+                    targetObject = data;
+                    urlToCreatedResource = context.getTransitionUrl(restDesc.target, data, req);
+                    return context.getLinks(data, req);
+                })
+                .then(function (links) {
+                    res.set('Content-Type', MEDIA_TYPE);
+                    res.set('Location', urlToCreatedResource);
+                    return res.status(201).json({
+                        href: urlToCreatedResource,
+                        object: targetObject,
+                        links: links
+                    });
+                })
+        });
+    },
+    query: function (router, context, urlPattern, restDesc) {
+        return router.get(urlPattern, function (req, res) {
+            var representation;
+            return restDesc.search(req.query)
+                .then(function (data) {
+                    representation = {
+                        collection: {
+                            self: req.originalUrl,
+                            perpage: data.perpage,
+                            page: data.page,
+                            total: data.total
                         }
-                    } else {
-                        representation = data;
-                    }
-
+                    };
+                    representation.collection.items = [];
+                    data.items.forEach(function (itemData) {
+                        var href = context.getTransitionUrl(restDesc.element, itemData, req);
+                        var copy = Object.assign({}, itemData);
+                        delete copy['id'];
+                        var item = {
+                            href: href,
+                            data: copy
+                        };
+                        representation.collection.items.push(item);
+                    });
+                    return context.getLinks(data, req);
+                })
+                .then(function (links) {
+                    representation.links = links;
+                    res.set('Content-Type', MEDIA_TYPE);
+                    return res.status(200).json(representation);
+                })
+                .catch(function (err) {
+                    return res.status(500).send(err);
+                })
+        });
+    },
+    read: function (router, context, urlPattern, restDesc) {
+        return router.get(urlPattern, function (req, res) {
+            var representation;
+            return restDesc.handler(req, res)
+                .then(function (data) {
+                    representation = {
+                        self: req.originalUrl,
+                        object: data
+                    };
+                    res.set('ETag', data.__v);
+                    return context.getLinks(data, req);
+                })
+                .then(function (links) {
+                    representation.links = links;
+                    res.set('Content-Type', MEDIA_TYPE);
                     return res.status(200).json(representation);
                 });
         });
+    }
+};
+
+module.exports = {
+    attach: function (router, currentResource, urlPattern, restDesc) {
+        var toAttach = handlerMap[restDesc.type.toLowerCase()];
+        return toAttach(router, currentResource, urlPattern, restDesc);
     }
 }
 

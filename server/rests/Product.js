@@ -1,14 +1,15 @@
 /**
  * Created by clx on 2017/10/13.
  */
+const dbProducts = require('../data/Specifications');
 
 module.exports = {
     url: '/rests/products/:id',
     rests: [
         {
-            method: 'Get',
+            type: 'read',
             handler: function (req, res) {
-                return 'I am product ' + req.params.id;
+                return dbProducts.findById(req.params.id);
             }
         }
     ]
