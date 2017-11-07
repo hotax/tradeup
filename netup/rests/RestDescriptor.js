@@ -51,7 +51,7 @@ const handlerMap = {
                 .then(function (data) {
                     representation = {
                         collection: {
-                            self: req.originalUrl,
+                            href: req.originalUrl,
                             perpage: data.perpage,
                             page: data.page,
                             total: data.total

@@ -668,7 +668,7 @@ describe('tradup', function () {
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
                             .expect(200, {
                                 collection: {
-                                    self: url + queryStr,
+                                    href: url + queryStr,
                                     items: [
                                         {
                                             link: {rel: elementResourceId, href: refElement1},
