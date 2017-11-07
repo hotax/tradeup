@@ -94,8 +94,8 @@ module.exports = {
         }
 
         var query = conditions ? conditions : {};
-        if (query.perpage && !query.perpage.isNumber) return rejectForInvalidPaginateParam('perpage');
-        if (query.page && !query.page.isNumber) return rejectForInvalidPaginateParam('page');
+        if (query.perpage && !Number.isInteger(query.perpage)) delete query.perpage;
+        if (query.page && !Number.isInteger(query.page)) delete query.page;
         query.schema = Schema;
         query.select = 'code name desc createDate grey';
         query.sort = '-createDate';

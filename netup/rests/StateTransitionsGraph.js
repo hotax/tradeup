@@ -18,7 +18,7 @@ module.exports = {
             },
             Product: {
                 self: "Product",
-                edit: 'Product',
+                update: 'Product',
                 delete: 'Product',
                 search: 'ProductSearch'
             }

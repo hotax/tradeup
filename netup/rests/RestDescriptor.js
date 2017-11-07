@@ -43,8 +43,11 @@ const handlerMap = {
     },
     query: function (router, context, urlPattern, restDesc) {
         return router.get(urlPattern, function (req, res) {
+            var query = Object.assign({}, req.query);
+            if (query.perpage) query.perpage = parseInt(query.perpage);
+            if (query.page) query.page = parseInt(query.page);
             var representation;
-            return restDesc.search(req.query)
+            return restDesc.search(query)
                 .then(function (data) {
                     representation = {
                         collection: {
@@ -60,7 +63,7 @@ const handlerMap = {
                         var copy = Object.assign({}, itemData);
                         delete copy['id'];
                         var item = {
-                            href: href,
+                            link: {rel: restDesc.element, href: href},
                             data: copy
                         };
                         representation.collection.items.push(item);

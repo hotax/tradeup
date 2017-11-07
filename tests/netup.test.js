@@ -235,29 +235,6 @@ describe('tradup', function () {
                 });
 
                 describe('搜索产品规格', function () {
-                    it('分页变量perpage非法', function () {
-                        return specifications.search({perpage: 'aaa'})
-                            .catch(function (data) {
-                                expect(data).eql({
-                                    code: 'InvalidCondition',
-                                    reason: '分页变量perpage非法'
-                                });
-                            })
-                    });
-
-                    it('分页变量page非法', function () {
-                        return SpecSchema.create([adata, adata, adata])
-                            .then(function () {
-                                return specifications.search({page: 'aaa'})
-                                    .catch(function (data) {
-                                        expect(data).eql({
-                                            code: 'InvalidCondition',
-                                            reason: '分页变量page非法'
-                                        });
-                                    })
-                            })
-                    });
-
                     it('未指定任何查询条件', function () {
                         var expectedData = {
                             "items": [
@@ -321,15 +298,25 @@ describe('tradup', function () {
                 ResponseMock = require('mock-express-response');
             });
 
-            describe('Home', function () {
-                it('服务入口', function () {
-                    handler = require('../server/rests/Home').rests[0].handler;
-                })
+            describe('新增规格', function () {
+                it('成功处理', function (done) {
+                    var postedData = {data: 'any specification to add'};
+
+                    var addStub = createPromiseStub([postedData], [postedData]);
+                    stubs['../data/Specifications'] = {add: addStub};
+                    var desc = proxyquire('../server/rests/Products', stubs);
+
+                    desc.rests[0].create(postedData)
+                        .then(function (data) {
+                            expect(data).eql(postedData);
+                            done();
+                        })
+                });
             });
 
             describe('搜索产品规格', function () {
+
                 it('搜索失败', function (done) {
-                    //var queryCondition = {conditions: 'any query conditions'};
                     var result = {
                         code: 'InvalidatedQuery',
                         reason: '失败原因'
@@ -379,20 +366,6 @@ describe('tradup', function () {
                     desc.rests[0].search()
                         .then(function (data) {
                             expect(data).eql(result);
-                            done();
-                        })
-                });
-
-                it('新增规格', function (done) {
-                    var postedData = {data: 'any specification to add'};
-
-                    var addStub = createPromiseStub([postedData], [postedData]);
-                    stubs['../data/Specifications'] = {add: addStub};
-                    var desc = proxyquire('../server/rests/Products', stubs);
-
-                    desc.rests[0].create(postedData)
-                        .then(function (data) {
-                            expect(data).eql(postedData);
                             done();
                         })
                 });
@@ -698,11 +671,11 @@ describe('tradup', function () {
                                     self: url + queryStr,
                                     items: [
                                         {
-                                            href: refElement1,
+                                            link: {rel: elementResourceId, href: refElement1},
                                             data: {foo: 'foo 1', fee: 'fee 1'}
                                         },
                                         {
-                                            href: refElement2,
+                                            link: {rel: elementResourceId, href: refElement2},
                                             data: {foo: 'foo 2', fee: 'fee 2'}
                                         }
                                     ],
