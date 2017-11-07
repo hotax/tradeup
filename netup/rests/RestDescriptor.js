@@ -31,7 +31,7 @@ const handlerMap = {
                     res.set('Content-Type', MEDIA_TYPE);
                     res.set('Location', urlToCreatedResource);
                     var representation = {
-                        self: urlToCreatedResource
+                        href: urlToCreatedResource
                     };
                     representation[restDesc.target] = targetObject;
                     if(links.length > 0) representation.links = links;
