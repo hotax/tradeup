@@ -9,11 +9,11 @@ const addProduct = function (data) {
 };
 
 module.exports = {
-    url: '/rests/products',
+    url: '/rests/Specifications',
     rests: [
         {
             type: 'create',
-            target: 'Product',
+            target: 'Specification',
             create: addProduct
         }
     ]

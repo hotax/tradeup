@@ -9,20 +9,20 @@ module.exports = {
     findTransitions: function (resourceId, context, req) {
         var trans = {
             Home: {
-                "search specifications": "ProductSearch",
-                "add specification": "Products"
+                "search specifications": "SpecificationSearch",
+                "add specification": "Specifications"
             },
-            ProductSearch: {
-                add: 'Products'
+            SpecificationSearch: {
+                add: 'Specifications'
             },
-            Products:{
-                search: 'ProductSearch'
+            Specifications:{
+                search: 'SpecificationSearch'
             },
-            Product: {
-                self: "Product",
-                update: 'Product',
-                delete: 'Product',
-                search: 'ProductSearch'
+            Specification: {
+                self: "Specification",
+                update: 'Specification',
+                delete: 'Specification',
+                search: 'SpecificationSearch'
             }
         };
         return Promise.resolve(trans[resourceId]);

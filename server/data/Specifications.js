@@ -86,12 +86,14 @@ module.exports = {
     },
 
     search: function (conditions) {
+/*
         function rejectForInvalidPaginateParam(name) {
             return Promise.reject({
                 code: 'InvalidCondition',
                 reason: '分页变量' + name + '非法'
             });
         }
+*/
 
         var query = conditions ? conditions : {};
         if (query.perpage && !Number.isInteger(query.perpage)) delete query.perpage;

@@ -4,7 +4,7 @@
 const dbProducts = require('../data/Specifications');
 
 module.exports = {
-    url: '/rests/products/:id',
+    url: '/rests/Specifications/:id',
     rests: [
         {
             type: 'read',

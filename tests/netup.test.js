@@ -304,7 +304,7 @@ describe('tradup', function () {
 
                     var addStub = createPromiseStub([postedData], [postedData]);
                     stubs['../data/Specifications'] = {add: addStub};
-                    var desc = proxyquire('../server/rests/Products', stubs);
+                    var desc = proxyquire('../server/rests/Specifications', stubs);
 
                     desc.rests[0].create(postedData)
                         .then(function (data) {
@@ -323,7 +323,7 @@ describe('tradup', function () {
                     };
                     var searchStub = createPromiseStub([], null, result);
                     stubs['../data/Specifications'] = {search: searchStub};
-                    var desc = proxyquire('../server/rests/ProductSearch', stubs);
+                    var desc = proxyquire('../server/rests/SpecificationSearch', stubs);
 
                     req = new RequestMock();
 
@@ -361,7 +361,7 @@ describe('tradup', function () {
 
                     var searchStub = createPromiseStub([], [result]);
                     stubs['../data/Specifications'] = {search: searchStub};
-                    var desc = proxyquire('../server/rests/ProductSearch', stubs);
+                    var desc = proxyquire('../server/rests/SpecificationSearch', stubs);
 
                     desc.rests[0].search()
                         .then(function (data) {

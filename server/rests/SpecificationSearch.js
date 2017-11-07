@@ -9,11 +9,11 @@ const productSearch = function (query) {
 }
 
 module.exports = {
-    url: '/rests/products/all/search',
+    url: '/rests/Specifications/all/search',
     rests: [
         {
             type: 'query',
-            element: 'Product',
+            element: 'Specification',
             search: productSearch
         }
     ]
