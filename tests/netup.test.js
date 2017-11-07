@@ -572,6 +572,8 @@ describe('tradup', function () {
 
                     err = "any error ...."
                     currentResource = {
+                        getResourceId:function () {
+                        },
                         getUrl: function () {
                         },
                         getTransitionUrl: function () {
@@ -756,8 +758,9 @@ describe('tradup', function () {
                 });
 
                 describe('读取资源状态服务', function () {
-                    var handlerStub, objRead, version;
+                    var resourceId, handlerStub, objRead, version;
                     beforeEach(function () {
+                        resourceId = "fuuuu";
                         version = "123456";
                         handlerStub = sinon.stub();
                         desc = {
@@ -769,6 +772,8 @@ describe('tradup', function () {
                     });
 
                     it('正确响应', function (done) {
+                        currentResource.getResourceId.returns(resourceId);
+
                         objRead = {
                             id: 'fooid',
                             foo: 'foo',
@@ -788,14 +793,17 @@ describe('tradup', function () {
                                 return Promise.resolve(expectedLinks);
                             });
 
+                        var representedObject = Object.assign({}, objRead);
+                        delete representedObject.__v;
+                        var representation = {
+                            href: url,
+                            links: expectedLinks
+                        };
+                        representation[resourceId] = representedObject;
                         request.get(url)
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
                             .expect('ETag', version)
-                            .expect(200, {
-                                self: url,
-                                object: objRead,
-                                links: expectedLinks
-                            }, done);
+                            .expect(200, representation, done);
                     });
 
                     it('未知错误返回500内部错', function (done) {
@@ -839,6 +847,11 @@ describe('tradup', function () {
                     expect(function () {
                         resourceRegistry.attach(router, resourceId, desc);
                     }).throw('a url must be defined!');
+                });
+
+                it('提供当前资源标识', function () {
+                    var resource = resourceRegistry.attach(router, 'foo', desc);
+                    expect(resource.getResourceId()).eql('foo');
                 });
 
                 describe('构建当前资源的URL', function () {

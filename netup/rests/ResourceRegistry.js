@@ -19,6 +19,9 @@ module.exports = {
 
         var urlPattern;
         var resource = {
+            getResourceId: function () {
+                return resourceId;
+            },
             getUrl: function (fromResourceId, context, req) {
                 var params = {};
                 for (var i = 0; i < urlPattern.keys.length; i++) {

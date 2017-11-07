@@ -87,10 +87,11 @@ const handlerMap = {
             return restDesc.handler(req, res)
                 .then(function (data) {
                     representation = {
-                        self: req.originalUrl,
-                        object: data
+                        href: req.originalUrl
                     };
+                    representation[context.getResourceId()] = data;
                     res.set('ETag', data.__v);
+                    delete data.__v;
                     return context.getLinks(data, req);
                 })
                 .then(function (links) {
