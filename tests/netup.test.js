@@ -741,8 +741,8 @@ describe('tradup', function () {
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
                             .expect('Location', urlToCreatedObject)
                             .expect(201, {
-                                href: urlToCreatedObject,
-                                object: objCreated,
+                                self: urlToCreatedObject,
+                                fuuuuuu: objCreated,
                                 links: expectedLinks
                             }, done);
                     });

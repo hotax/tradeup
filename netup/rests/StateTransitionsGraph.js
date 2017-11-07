@@ -13,8 +13,10 @@ module.exports = {
                 "add specification": "Products"
             },
             ProductSearch: {
-                self: "ProductSearch",
                 add: 'Products'
+            },
+            Products:{
+                search: 'ProductSearch'
             },
             Product: {
                 self: "Product",

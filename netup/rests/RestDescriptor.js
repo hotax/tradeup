@@ -30,11 +30,12 @@ const handlerMap = {
                 .then(function (links) {
                     res.set('Content-Type', MEDIA_TYPE);
                     res.set('Location', urlToCreatedResource);
-                    return res.status(201).json({
-                        href: urlToCreatedResource,
-                        object: targetObject,
-                        links: links
-                    });
+                    var representation = {
+                        self: urlToCreatedResource
+                    };
+                    representation[restDesc.target] = targetObject;
+                    if(links.length > 0) representation.links = links;
+                    return res.status(201).json(representation);
                 })
                 .catch(function (err) {
                     return res.status(500).send(err);
