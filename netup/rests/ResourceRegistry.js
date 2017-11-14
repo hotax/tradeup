@@ -17,7 +17,15 @@ module.exports = {
         if (!resourceDesc.url) throw 'a url must be defined!';
         if (!resourceDesc.rests || resourceDesc.rests.length < 1) throw 'no restful service is defined!';
 
-        var urlPattern;
+        var parseUrlPattern = function parseUrlPattern(urlPattern) {
+            var pattern = {
+                keys: [],
+            }
+            pathToRegexp(urlPattern, pattern.keys);
+            pattern.toPath = pathToRegexp.compile(urlPattern);
+            return pattern;
+        };
+        var urlPattern = parseUrlPattern(resourceDesc.url);
         var resource = {
             getResourceId: function () {
                 return resourceId;
@@ -65,25 +73,12 @@ module.exports = {
                         return links;
                     })
             },
-
-            //TODO: 无需在resource对象中定义attachTo方法，该方法应该直接在resource外执行
-            attachTo: function (router) {
-                function parseUrlPattern(urlPattern) {
-                    var pattern = {
-                        keys: [],
-                    }
-                    pathToRegexp(urlPattern, pattern.keys);
-                    pattern.toPath = pathToRegexp.compile(urlPattern);
-                    return pattern;
-                }
-
-                resourceDesc.rests.forEach(function (service) {
-                    restDescriptor.attach(router, resource, resourceDesc.url, service);
-                });
-                urlPattern = parseUrlPattern(resourceDesc.url);
-            }
         };
-        resource.attachTo(router);
+
+        resourceDesc.rests.forEach(function (service) {
+            restDescriptor.attach(router, resource, resourceDesc.url, service);
+        });
+
         __resources[resourceId] = resource;
         return resource;
     }
