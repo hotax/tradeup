@@ -14,7 +14,7 @@ module.exports = {
         {
             type: 'query',
             element: 'Specification',
-            search: specificationSearch
+            handler: specificationSearch
         }
     ]
 }

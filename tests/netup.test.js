@@ -305,7 +305,7 @@ describe('tradup', function () {
                     stubs['../data/Specifications'] = {add: addStub};
                     var desc = proxyquire('../server/rests/Specifications', stubs);
 
-                    desc.rests[0].create(postedData)
+                    desc.rests[0].handler(postedData)
                         .then(function (data) {
                             expect(data).eql(postedData);
                             done();
@@ -326,7 +326,7 @@ describe('tradup', function () {
 
                     req = new RequestMock();
 
-                    desc.rests[0].search(req)
+                    desc.rests[0].handler(req)
                         .catch(function (err) {
                             expect(err).eql(result);
                             done();
@@ -362,7 +362,7 @@ describe('tradup', function () {
                     stubs['../data/Specifications'] = {search: searchStub};
                     var desc = proxyquire('../server/rests/SpecificationSearch', stubs);
 
-                    desc.rests[0].search()
+                    desc.rests[0].handler()
                         .then(function (data) {
                             expect(data).eql(result);
                             done();
@@ -628,7 +628,7 @@ describe('tradup', function () {
                         desc = {
                             type: 'query',
                             element: elementResourceId,
-                            search: searchStub
+                            handler: searchStub
                         };
 
                         restDescriptor.attach(app, currentResource, url, desc);
@@ -715,7 +715,7 @@ describe('tradup', function () {
                         desc = {
                             type: 'create',
                             target: targetResourceId,
-                            create: createStub
+                            handler: createStub
                         };
 
                         restDescriptor.attach(app, currentResource, url, desc);

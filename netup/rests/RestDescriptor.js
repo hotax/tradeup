@@ -22,7 +22,7 @@ const handlerMap = {
     create: function (router, context, urlPattern, restDesc) {
         return router.post(urlPattern, function (req, res) {
             var urlToCreatedResource, targetObject;
-            return restDesc.create(req.body)
+            return restDesc.handler(req.body)
                 .then(function (data) {
                     targetObject = data;
                     urlToCreatedResource = context.getTransitionUrl(restDesc.target, data, req);
@@ -49,7 +49,7 @@ const handlerMap = {
             if (query.perpage) query.perpage = parseInt(query.perpage);
             if (query.page) query.page = parseInt(query.page);
             var representation;
-            return restDesc.search(query)
+            return restDesc.handler(query)
                 .then(function (data) {
                     var self = URL.resolve(req, req.originalUrl);
                     representation = {

@@ -14,7 +14,7 @@ module.exports = {
         {
             type: 'create',
             target: 'Specification',
-            create: addSpecification
+            handler: addSpecification
         }
     ]
 }
