@@ -1007,19 +1007,28 @@ describe('tradup', function () {
         });
 
         describe('基于express实现', function () {
-            it('组装完整的URL', function () {
-                var protocol = 'http';
-                var host = "www.hotex.com:2341";
-                var getHostStub = sinon.stub();
-                getHostStub.withArgs('host').returns(host);
+            describe('组装完整的URL', function () {
+                var protocol, getHostStub, reqStub, URL;
 
-                var reqStub = {
-                    protocol: protocol,
-                    get: getHostStub
-                };
+                beforeEach(function () {
+                    protocol = 'http';
+                    getHostStub = sinon.stub();
+                    reqStub = {
+                        protocol: protocol,
+                        get: getHostStub
+                    };
+                    URL = require('../netup/express/Url');
+                });
 
-                var URL = require('../netup/express/Url');
-                expect(URL.resolve(reqStub, '/rest/foo')).eql("http://www.hotex.com:2341/rest/foo");
+                it('包含端口号', function () {
+                    getHostStub.withArgs('host').returns("www.hotex.com:2341");
+                    expect(URL.resolve(reqStub, '/rest/foo')).eql("http://www.hotex.com:2341/rest/foo");
+                });
+
+                it('应省略HTTP下的80端口号', function () {
+                    getHostStub.withArgs('host').returns("www.hotex.com:80");
+                    expect(URL.resolve(reqStub, '/rest/foo')).eql("http://www.hotex.com/rest/foo");
+                });
             });
 
             describe('开发人员可以加载handlebars View engine', function () {
