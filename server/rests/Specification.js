@@ -1,7 +1,7 @@
 /**
  * Created by clx on 2017/10/13.
  */
-const dbProducts = require('../data/Specifications');
+const dbSpecifications = require('../data/Specifications');
 
 module.exports = {
     url: '/rests/Specifications/:id',
@@ -9,7 +9,7 @@ module.exports = {
         {
             type: 'read',
             handler: function (req, res) {
-                return dbProducts.findById(req.params.id);
+                return dbSpecifications.findById(req.params.id);
             }
         }
     ]

@@ -2,10 +2,10 @@
  * Created by clx on 2017/10/13.
  */
 
-var dbProducts = require('../data/Specifications');
+var dbSpecifications = require('../data/Specifications');
 
-const addProduct = function (data) {
-    return dbProducts.add(data);
+const addSpecification = function (data) {
+    return dbSpecifications.add(data);
 };
 
 module.exports = {
@@ -14,7 +14,7 @@ module.exports = {
         {
             type: 'create',
             target: 'Specification',
-            create: addProduct
+            create: addSpecification
         }
     ]
 }

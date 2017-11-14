@@ -2,10 +2,10 @@
  * Created by clx on 2017/10/13.
  */
 
-var dbProducts = require('../data/Specifications');
+var dbSpecifications = require('../data/Specifications');
 
-const productSearch = function (query) {
-    return dbProducts.search(query);
+const specificationSearch = function (query) {
+    return dbSpecifications.search(query);
 }
 
 module.exports = {
@@ -14,7 +14,7 @@ module.exports = {
         {
             type: 'query',
             element: 'Specification',
-            search: productSearch
+            search: specificationSearch
         }
     ]
 }
