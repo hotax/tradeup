@@ -2,7 +2,7 @@
  * Created by clx on 2017/10/13.
  */
 const Promise = require('bluebird'),
-    URL = require('url'),
+    URL = require('../express/Url'),
     restDescriptor = require('./RestDescriptor'),
     pathToRegexp = require('path-to-regexp');
 
@@ -46,9 +46,7 @@ module.exports = {
                 }
 
                 var path = urlPattern.toPath(params);
-                if(process.env.HOST){
-                    path = URL.resolve('http://' + process.env.HOST + ':' + process.env.PORT, path);
-                }
+                path = URL.resolve(req, path);
 
                 return path;
             },
@@ -67,6 +65,8 @@ module.exports = {
                         return links;
                     })
             },
+
+            //TODO: 无需在resource对象中定义attachTo方法，该方法应该直接在resource外执行
             attachTo: function (router) {
                 function parseUrlPattern(urlPattern) {
                     var pattern = {

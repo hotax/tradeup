@@ -4,14 +4,13 @@
 var proxyquire = require('proxyquire'),
     path = require('path'),
     mongoose = require('mongoose'),
-    Schema = mongoose.Schema,
-    ObjectId = Schema.Types.ObjectId;
+    Schema = mongoose.Schema;
 
 describe('tradup', function () {
     var stubs, err;
 
     beforeEach(function () {
-        stubs = {}
+        stubs = {};
         err = new Error('any error message');
     });
 
@@ -560,7 +559,7 @@ describe('tradup', function () {
             describe('对Rest服务的解析', function () {
                 var requestAgent, app, request;
                 var url, desc, currentResource;
-                var restDescriptor;
+                var selfUrl, urlResolveStub, restDescriptor;
 
                 beforeEach(function () {
                     url = '/rests/foo';
@@ -572,7 +571,7 @@ describe('tradup', function () {
 
                     err = "any error ...."
                     currentResource = {
-                        getResourceId:function () {
+                        getResourceId: function () {
                         },
                         getUrl: function () {
                         },
@@ -582,7 +581,11 @@ describe('tradup', function () {
                         }
                     };
                     currentResource = sinon.stub(currentResource);
-                    restDescriptor = require('../netup/rests/RestDescriptor');
+
+                    selfUrl = '/rests/foo/self';
+                    urlResolveStub = sinon.stub();
+                    stubs['../express/Url'] = {resolve: urlResolveStub};
+                    restDescriptor = proxyquire('../netup/rests/RestDescriptor', stubs);
                 });
 
                 describe('入口服务', function () {
@@ -665,12 +668,19 @@ describe('tradup', function () {
                             return refurl;
                         });
 
+                        urlResolveStub.callsFake(function (req, urlArg) {
+                            expect(urlArg).eql(url + queryStr);
+                            return selfUrl;
+                        });
+                        restDescriptor = proxyquire('../netup/rests/RestDescriptor', stubs);
+                        restDescriptor.attach(app, currentResource, url, desc);
+
                         request.get(url)
                             .query(reqQuery)
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
                             .expect(200, {
                                 collection: {
-                                    href: url + queryStr,
+                                    href: selfUrl,
                                     items: [
                                         {
                                             link: {rel: elementResourceId, href: refElement1},
@@ -767,8 +777,6 @@ describe('tradup', function () {
                             type: 'read',
                             handler: handlerStub
                         };
-
-                        restDescriptor.attach(app, currentResource, url, desc);
                     });
 
                     it('正确响应', function (done) {
@@ -796,10 +804,18 @@ describe('tradup', function () {
                         var representedObject = Object.assign({}, objRead);
                         delete representedObject.__v;
                         var representation = {
-                            href: url,
+                            href: selfUrl,
                             links: expectedLinks
                         };
                         representation[resourceId] = representedObject;
+
+                        urlResolveStub.callsFake(function (req, urlArg) {
+                            expect(urlArg).eql(url);
+                            return selfUrl;
+                        });
+                        restDescriptor = proxyquire('../netup/rests/RestDescriptor', stubs);
+                        restDescriptor.attach(app, currentResource, url, desc);
+
                         request.get(url)
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
                             .expect('ETag', version)
@@ -808,6 +824,7 @@ describe('tradup', function () {
 
                     it('未知错误返回500内部错', function (done) {
                         handlerStub.returns(Promise.reject(err));
+                        restDescriptor.attach(app, currentResource, url, desc);
                         request.get(url)
                             .expect(500, err, done);
                     });
@@ -857,6 +874,7 @@ describe('tradup', function () {
                 describe('构建当前资源的URL', function () {
                     var fromResourceId, context, req;
                     var resource;
+                    var expectedUrl, urlResolveStub;
 
                     beforeEach(function () {
                         fromResourceId = 'fff';
@@ -865,21 +883,18 @@ describe('tradup', function () {
                             params: {},
                             query: {}
                         }
+
+                        expectedUrl = "/expected/url";
+                        urlResolveStub = sinon.stub();
+                        stubs['../express/Url'] = {resolve: urlResolveStub};
                     });
 
                     it('无路径变量', function () {
-                        resource = resourceRegistry.attach(router, resourceId, desc);
-                        expect(resource.getUrl()).eql(url);
-                    });
+                        urlResolveStub.withArgs(req, url).returns(expectedUrl);
+                        resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
 
-                    it('发布者可以通过设置环境变量HOST决定URL中是否包含BaseUrl', function () {
-                        process.env.HOST = 'www.hotex.com';
-                        process.env.PORT = 34211;
                         resource = resourceRegistry.attach(router, resourceId, desc);
-                        expect(resource.getUrl()).eql('http://www.hotex.com:34211' + url);
-
-                        delete process.env.HOST;
-                        delete process.env.PORT;
+                        expect(resource.getUrl(fromResourceId, context, req)).eql(expectedUrl);
                     });
 
                     it('未定义迁移，缺省方式从上下文中取同路径变量名相同的属性值', function () {
@@ -888,8 +903,11 @@ describe('tradup', function () {
                         req.params.arg2 = '3456';
                         req.query.arg1 = '5678';
 
+                        urlResolveStub.withArgs(req, '/url/5678/and/3456/and/1234').returns(expectedUrl);
+                        resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
+
                         resource = resourceRegistry.attach(router, resourceId, desc);
-                        expect(resource.getUrl(fromResourceId, context, req)).eql('/url/5678/and/3456/and/1234');
+                        expect(resource.getUrl(fromResourceId, context, req)).eql(expectedUrl);
                     });
 
                     it('通过定义迁移指定路径变量的取值', function () {
@@ -905,23 +923,30 @@ describe('tradup', function () {
                         req.params.foo = '3456';
                         req.query.foo = '5678';
 
-                        resource = resourceRegistry.attach(router, resourceId, desc);
-                        expect(resource.getUrl(fromResourceId, context, req)).eql('/url/5678/and/3456/and/1234/and/9876');
-                    });
-                });
+                        urlResolveStub.withArgs(req, '/url/5678/and/3456/and/1234/and/9876').returns(expectedUrl);
+                        resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
 
-                it('构建从当前资源迁移到指定资源的URL', function () {
-                    var fooDesc = {
-                        url: '/url/foo',
-                        rests: [restDesc]
-                    };
-                    var feeDesc = {
-                        url: '/url/fee',
-                        rests: [restDesc]
-                    };
-                    var fooResource = resourceRegistry.attach(router, 'foo', fooDesc);
-                    resourceRegistry.attach(router, 'fee', feeDesc);
-                    expect(fooResource.getTransitionUrl('fee')).eql('/url/fee');
+                        resource = resourceRegistry.attach(router, resourceId, desc);
+                        expect(resource.getUrl(fromResourceId, context, req)).eql(expectedUrl);
+                    });
+
+                    it('构建从当前资源迁移到指定资源的URL', function () {
+                        var fooDesc = {
+                            url: '/url/foo',
+                            rests: [restDesc]
+                        };
+                        var feeDesc = {
+                            url: '/url/fee',
+                            rests: [restDesc]
+                        };
+
+                        urlResolveStub.withArgs(req, '/url/fee').returns(expectedUrl);
+                        resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
+
+                        var fooResource = resourceRegistry.attach(router, 'foo', fooDesc);
+                        resourceRegistry.attach(router, 'fee', feeDesc);
+                        expect(fooResource.getTransitionUrl('fee', context, req)).eql(expectedUrl);
+                    });
                 });
 
                 it('获得当前资源状态下的迁移链接列表', function (done) {
@@ -982,6 +1007,21 @@ describe('tradup', function () {
         });
 
         describe('基于express实现', function () {
+            it('组装完整的URL', function () {
+                var protocol = 'http';
+                var host = "www.hotex.com:2341";
+                var getHostStub = sinon.stub();
+                getHostStub.withArgs('host').returns(host);
+
+                var reqStub = {
+                    protocol: protocol,
+                    get: getHostStub
+                };
+
+                var URL = require('../netup/express/Url');
+                expect(URL.resolve(reqStub, '/rest/foo')).eql("http://www.hotex.com:2341/rest/foo");
+            });
+
             describe('开发人员可以加载handlebars View engine', function () {
                 var viewsDir, viewEngineName, viewEngine, expressApp, appMock;
                 var handlebarsEngineCreatorStub;
@@ -1156,6 +1196,5 @@ describe('tradup', function () {
             });
         });
     });
-})
-;
+});
 

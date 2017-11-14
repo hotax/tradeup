@@ -60,5 +60,6 @@ module.exports.begin = function (base) {
             normalizeTags: false,
             trim: true
         }));
+        app.set('trust proxy', 'loopback'); // 参考： Express behind proxies
     }
 }

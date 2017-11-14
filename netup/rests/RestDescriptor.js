@@ -2,11 +2,12 @@
  * Created by clx on 2017/10/13.
  */
 const MEDIA_TYPE = 'application/vnd.hotex.com+json';
+const URL = require('../express/Url');
 
 const handlerMap = {
     entry: function (router, context, urlPattern, restDesc) {
         return router.get(urlPattern, function (req, res) {
-            return context.getLinks()
+            return context.getLinks(null, req)
                 .then(function (links) {
                     res.set('Content-Type', MEDIA_TYPE);
                     return res.status(200).json({
@@ -50,9 +51,10 @@ const handlerMap = {
             var representation;
             return restDesc.search(query)
                 .then(function (data) {
+                    var self = URL.resolve(req, req.originalUrl);
                     representation = {
                         collection: {
-                            href: req.originalUrl,
+                            href: self,
                             perpage: data.perpage,
                             page: data.page,
                             total: data.total
@@ -86,8 +88,9 @@ const handlerMap = {
             var representation;
             return restDesc.handler(req, res)
                 .then(function (data) {
+                    var self = URL.resolve(req, req.originalUrl);
                     representation = {
-                        href: req.originalUrl
+                        href: self
                     };
                     representation[context.getResourceId()] = data;
                     res.set('ETag', data.__v);
