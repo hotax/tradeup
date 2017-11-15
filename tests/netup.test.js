@@ -14,7 +14,7 @@ describe('tradup', function () {
         err = new Error('any error message');
     });
 
-    describe('application', function () {
+    describe('applications', function () {
         describe('数据库', function () {
             var dbConnection;
             before(function (done) {
@@ -367,6 +367,19 @@ describe('tradup', function () {
                             expect(data).eql(result);
                             done();
                         })
+                });
+            });
+
+            describe('Hyperbucks', function () {
+                describe('服务员下单', function () {
+                    beforeEach(function () {
+                        handler = require('../server/rests/OrdersFulfillment').rests[0].handler;
+                    });
+
+                    it('添加订单失败', function () {
+                        var createOrderStub = createPromiseStub([orderPlaced], null, err);
+                        //TODO:实现服务员下单服务
+                    })
                 });
             });
         });

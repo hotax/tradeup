@@ -2,10 +2,12 @@
  * Created by clx on 2017/10/9.
  */
 const path = require('path'),
-    restDir = path.join(__dirname, './server/rests'),
+    //restDir = path.join(__dirname, './server/rests'),
+    restDir = path.join(__dirname, './server/ANSteel/rests'),
     resourceDescriptors = require('./netup/rests/DirectoryResourceDescriptorsLoader').loadFrom(restDir),
     resourceRegistry = require('./netup/rests/ResourceRegistry'),
-    transitionsGraph = require('./netup/rests/StateTransitionsGraph'),
+    //transitionsGraph = require('./netup/rests/StateTransitionsGraph'),
+    transitionsGraph = require('./server/ANSteel/StateTransitionsGraph'),
     connectDb = require('./netup/db/mongoDb/ConnectMongoDb'),
     appBuilder = require('./netup/express/AppBuilder');
 
