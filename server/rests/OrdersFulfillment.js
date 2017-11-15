@@ -2,7 +2,7 @@
  * Created by clx on 2017/10/13.
  */
 
-var restbucksOrders = require('../data/restbucks/RestbucksOrders');
+var restbucksOrders = require('../data/hyperbucks/RestbucksOrders');
 
 const create = function (data) {
     return restbucksOrders.add(data);
