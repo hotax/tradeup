@@ -9,8 +9,27 @@ module.exports = {
     findTransitions: function (resourceId, context, req) {
         var trans = {
             Home: {
+                "login": "Roles",
                 "search specifications": "SpecificationSearch",
                 "add specification": "Specifications"
+            },
+            Roles: {
+                Cashier: "Cashier",
+                Barista: "Barista"
+            },
+            Cashier:{
+                "place order": 'OrdersFulfillment',
+                "review order": 'FindOrderToFulfill'
+            },
+            OrderToFulfillForCashier: {
+                edit: "OrderToFulfill",
+                cancel: "OrderToFulfill"
+            },
+            Barista:{
+                "select order": "OrdersToFulfill"
+            },
+            OrderToFulfillForBarista: {
+                reverse: "OrderToFulfill"
             },
             SpecificationSearch: {
                 add: 'Specifications'
