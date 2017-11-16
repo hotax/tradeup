@@ -376,17 +376,16 @@ describe('tradup', function () {
                             beforeEach(function () {
                             });
 
-                            xit('添加订单失败', function (done) {
+                            it('添加订单失败', function () {
                                 var ordersDbModelMock = {mock: "salesorder"};
                                 stubs['../../data/models/salesorder'] = ordersDbModelMock;
                                 var order = {data: "any data of order"};
                                 var createStub = createPromiseStub([ordersDbModelMock, order], null, err);
-                                stubs['../../../../netup/db/mongoDb/SaveObjToDb'] = createStub;
+                                stubs['../../../../netup/db/mongoDb/SaveObjectToDb'] = createStub;
                                 salesOrders = proxyquire('../server/ANSteel/biz/sales/SalesOrders', stubs);
                                 return salesOrders.draft(order)
                                     .catch(function (e) {
                                         expect(e).eql(err);
-                                        done();
                                     })
                             })
                         });

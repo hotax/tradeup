@@ -5,7 +5,6 @@
 const mongoose = require('mongoose'),
     Schema = mongoose.Schema,
     ObjectId = Schema.Types.ObjectId,
-    paginatingQuery = require('../../../../netup/db/mongoDb/PaginatingQuery'),
     dbModel = require('../../data/models/salesorder'),
     saveObjToDb = require('../../../../netup/db/mongoDb/SaveObjectToDb');
 
