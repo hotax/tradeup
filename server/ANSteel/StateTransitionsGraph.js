@@ -18,9 +18,13 @@ module.exports = {
                 "review draft orders": "DraftOrders",
                 "draft order": 'DraftOrders'
             },
+            DraftOrders:{
+                "draft order": 'DraftOrders'
+            },
             DraftOrder:{
                 edit: "DraftOrder",
-                cancel: "DraftOrder"
+                cancel: "DraftOrder",
+                "review draft orders": "DraftOrders"
             },
             QualityReviewer:{
                 review: "DraftOrderQualityReviewLine"
