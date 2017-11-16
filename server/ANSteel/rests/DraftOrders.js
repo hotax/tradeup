@@ -10,6 +10,11 @@ module.exports = {
             type: 'create',
             target: 'DraftOrder',
             handler: salesOrders.draft
+        },
+        {
+            type: 'query',
+            element: 'DraftOrder',
+            handler: salesOrders.listDrafts
         }
     ]
 }

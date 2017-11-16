@@ -5,17 +5,9 @@
 const mongoose = require('mongoose'),
     Schema = mongoose.Schema,
     ObjectId = Schema.Types.ObjectId,
+    paginatingQuery = require('../../../../netup/db/mongoDb/PaginatingQuery'),
     dbModel = require('../../data/models/salesorder'),
     saveObjToDb = require('../../../../netup/db/mongoDb/SaveObjectToDb');
-
-const extractFromDoc = function (doc) {
-    var result = model.toObject();
-    delete result._id;
-    result.id = model.id;
-    for (var p in result) {
-
-    }
-}
 
 module.exports = {
     draft: function (data) {
@@ -29,5 +21,20 @@ module.exports = {
                 result.id = model.id;
                 return result;
             })
+    },
+    listDrafts: function () {
+        return dbModel.find()
+            .select('orderNo createDate')
+            .sort('-createDate')
+            .exec()
+            .then(function (data) {
+                var dataAfterHandled = [];
+                data.forEach(function (element) {
+                    var item = element.toJSON();
+                    item.id = element.id;
+                    dataAfterHandled.push(item);
+                });
+                return {items: dataAfterHandled};
+            });
     }
 }

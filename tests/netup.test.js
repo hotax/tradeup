@@ -365,9 +365,10 @@ describe('tradup', function () {
 
                 describe('业务', function () {
                     describe('销售订单', function () {
-                        var salesOrders;
+                        var salesOrders, orderModel;
 
                         beforeEach(function () {
+                            orderModel = require('../server/ANSteel/data/models/salesorder');
                             salesOrders = proxyquire('../server/ANSteel/biz/sales/SalesOrders', stubs);
                         });
 
@@ -394,7 +395,6 @@ describe('tradup', function () {
                             var orderInDb, id;
 
                             beforeEach(function () {
-                                var orderModel = require('../server/ANSteel/data/models/salesorder');
                                 return new orderModel(fooSampleDraftOrder).save()
                                     .then(function (model) {
                                         orderInDb = model;
@@ -406,9 +406,38 @@ describe('tradup', function () {
                                 return salesOrders.findById(id)
                                     .then(function (data) {
                                         expect(data).not.null;
-                                        expect(data).eql({});
+                                        //expect(data).eql({});
                                     })
                             })
+                        });
+
+                        describe('列出所有订单草稿', function () {
+                            var foo, fooid, fooCreateDate;
+                            var fee, feeid, feeCreateDate;
+
+                            beforeEach(function () {
+                                fooCreateDate = new Date(2017, 11, 15);
+                                feeCreateDate = new Date(2017, 11, 16);
+                                foo = {orderNo: "foo", createDate: fooCreateDate};
+                                fee = {orderNo: "fee", createDate: feeCreateDate};
+                                return new orderModel(foo).save()
+                                    .then(function (model) {
+                                        fooid = model.id;
+                                        return new orderModel(fee).save()
+                                            .then(function (model) {
+                                                feeid = model.id;
+                                            })
+                                    })
+                            });
+
+                            it('全部列出', function () {
+                                return salesOrders.listDrafts()
+                                    .then(function (list) {
+                                        delete list.items[0].id;
+                                        delete list.items[1].id;
+                                        expect(list).eql({"items": [fee, foo]});
+                                    });
+                            });
                         });
                     });
                 });
@@ -529,7 +558,8 @@ describe('tradup', function () {
                     var salesOrders;
                     beforeEach(function () {
                         salesOrders = {
-                            findById:function (id) {}
+                            findById: function (id) {
+                            }
                         };
                         salesOrders = sinon.stub(salesOrders);
                         stubs['../biz/sales/SalesOrders'] = salesOrders;
