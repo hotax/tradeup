@@ -22,6 +22,7 @@ module.exports = {
                 "draft order": 'DraftOrders'
             },
             DraftOrder:{
+                self: "DraftOrder",
                 edit: "DraftOrder",
                 cancel: "DraftOrder",
                 "review draft orders": "DraftOrders"
