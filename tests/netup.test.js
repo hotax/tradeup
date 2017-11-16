@@ -16,7 +16,7 @@ describe('tradup', function () {
 
     describe('applications', function () {
         describe('数据库', function () {
-            var dbConnection, Schema, dataToAdd;
+            var dbConnection, Schema;
             before(function (done) {
                 //ObjectID = require('mongodb').ObjectID;
                 mongoose.Promise = global.Promise;
@@ -289,9 +289,10 @@ describe('tradup', function () {
             });
 
             describe('ANSteel Sales', function () {
-                it('销售订单', function () {
-                    Schema = require('../server/ANSteel/data/models/salesorder');
-                    dataToAdd = {
+                var fooSampleDraftOrder;
+
+                beforeEach(function () {
+                    fooSampleDraftOrder = {
                         "orderNo": "162810026",
                         "productLine": "冷轧#1线",
                         "customer": "1004234",
@@ -352,10 +353,64 @@ describe('tradup', function () {
                         "sales": "张三",
                         "createDate": new Date(2017, 11, 11)
                     };
-                    return new Schema(dataToAdd).save()
+                });
+
+                it('销售订单', function () {
+                    Schema = require('../server/ANSteel/data/models/salesorder');
+                    return new Schema(fooSampleDraftOrder).save()
                         .then(function (obj) {
                             expect(obj).not.null;
                         });
+                });
+
+                describe('业务', function () {
+                    describe('销售订单', function () {
+                        var salesOrders;
+
+                        beforeEach(function () {
+                            salesOrders = proxyquire('../server/ANSteel/biz/sales/SalesOrders', stubs);
+                        });
+
+                        describe('草拟订单', function () {
+                            beforeEach(function () {
+                            });
+
+                            xit('添加订单失败', function (done) {
+                                var ordersDbModelMock = {mock: "salesorder"};
+                                stubs['../../data/models/salesorder'] = ordersDbModelMock;
+                                var order = {data: "any data of order"};
+                                var createStub = createPromiseStub([ordersDbModelMock, order], null, err);
+                                stubs['../../../../netup/db/mongoDb/SaveObjToDb'] = createStub;
+                                salesOrders = proxyquire('../server/ANSteel/biz/sales/SalesOrders', stubs);
+                                return salesOrders.draft(order)
+                                    .catch(function (e) {
+                                        expect(e).eql(err);
+                                        done();
+                                    })
+                            })
+                        });
+
+                        describe('按标识读取订单草稿', function () {
+                            var orderInDb, id;
+
+                            beforeEach(function () {
+                                var orderModel = require('../server/ANSteel/data/models/salesorder');
+                                return new orderModel(fooSampleDraftOrder).save()
+                                    .then(function (model) {
+                                        orderInDb = model;
+                                        id = orderInDb.id;
+                                    })
+                            });
+
+                            it('正确读取', function () {
+                                return salesOrders.findById(id)
+                                    .then(function (data) {
+                                        expect(data).not.null;
+                                        expect(data).eql({});
+                                    })
+                            })
+                        });
+                    });
                 });
             });
 
@@ -372,30 +427,6 @@ describe('tradup', function () {
                     .then(function (data) {
                         expect(data).not.null;
                     })
-            });
-        });
-
-        describe('业务', function () {
-            describe('ANSteel Sales', function () {
-                var salesOrders, createStub;
-                describe('销售人员草拟订单', function () {
-                    beforeEach(function () {
-                    });
-
-                    it('添加订单失败', function (done) {
-                        var ordersDbModelMock = {mock: "salesorder"};
-                        stubs['../../data/models/salesorder'] = ordersDbModelMock;
-                        var order = {data: "any data of order"};
-                        var createStub = createPromiseStub([ordersDbModelMock, order], null, err);
-                        stubs['../../../../netup/db/mongoDb/SaveObjToDb'] = createStub;
-                        salesOrders = proxyquire('../server/ANSteel/biz/sales/SalesOrders', stubs);
-                        return salesOrders.draft(order)
-                            .catch(function (e) {
-                                expect(e).eql(err);
-                                done();
-                            })
-                    })
-                });
             });
         });
 
@@ -487,8 +518,37 @@ describe('tradup', function () {
                     });
 
                     it('添加订单失败', function () {
-                        var createOrderStub = createPromiseStub([orderPlaced], null, err);
+                        //var createOrderStub = createPromiseStub([orderPlaced], null, err);
                         //TODO:实现服务员下单服务
+                    })
+                });
+            });
+
+            describe('ANSteel', function () {
+                describe('销售人员需要能够获得订单草稿', function () {
+                    var salesOrders;
+                    beforeEach(function () {
+                        salesOrders = {
+                            findById:function (id) {}
+                        };
+                        salesOrders = sinon.stub(salesOrders);
+                        stubs['../biz/sales/SalesOrders'] = salesOrders;
+                        handler = proxyquire('../server/ANSteel/rests/DraftOrder', stubs).rests[0].handler;
+                    });
+
+                    it('成功获得指定的订单草稿', function () {
+                        var orderId = '4355rffss';
+                        var order = {order: 'any order data'};
+                        req = {
+                            params: {
+                                id: orderId
+                            }
+                        };
+                        salesOrders.findById.withArgs(orderId).returns(Promise.resolve(order));
+                        return handler(req, res)
+                            .then(function (data) {
+                                expect(data).eql(order);
+                            })
                     })
                 });
             });
