@@ -16,7 +16,7 @@ describe('tradup', function () {
 
     describe('applications', function () {
         describe('数据库', function () {
-            var dbConnection;
+            var dbConnection, Schema, dataToAdd;
             before(function (done) {
                 //ObjectID = require('mongodb').ObjectID;
                 mongoose.Promise = global.Promise;
@@ -286,7 +286,117 @@ describe('tradup', function () {
                             })
                     });
                 });
-            })
+            });
+
+            describe('ANSteel Sales', function () {
+                it('销售订单', function () {
+                    Schema = require('../server/ANSteel/data/models/salesorder');
+                    dataToAdd = {
+                        "orderNo": "162810026",
+                        "productLine": "冷轧#1线",
+                        "customer": "1004234",
+                        "settlement": {
+                            "account": "23456788",
+                            "taxType": "非免税"
+                        },
+                        "items": [
+                            {
+                                "no": "001",
+                                "product": "优质结构碳素钢",
+                                "spec": "规格1",
+                                "qty": 60,
+                                "unit": "T",
+                                "transportation": {
+                                    "type": "铁运",
+                                    "dest": "大连东",
+                                    "package": "冷卷简易包装",
+                                    "label": "中船冷轧#1"
+                                },
+                                "due": {
+                                    "type": "W",
+                                    "from": new Date(2018, 11, 1),
+                                    "to": new Date(2018, 11, 30)
+                                },
+                                "price": {
+                                    "price": 2300,
+                                    "discount": 80,
+                                    "taxRate": 0.001,
+                                    "fee": 0.52
+                                }
+                            },
+                            {
+                                "no": "002",
+                                "product": "优质结构碳素钢",
+                                "spec": "规格2",
+                                "qty": 80,
+                                "unit": "T",
+                                "transportation": {
+                                    "type": "汽运",
+                                    "dest": "铁岭",
+                                    "package": "冷卷简易包装",
+                                    "label": "中船冷轧#2"
+                                },
+                                "due": {
+                                    "type": "W",
+                                    "from": new Date(2018, 12, 1),
+                                    "to": new Date(2018, 12, 31)
+                                },
+                                "price": {
+                                    "price": 2400,
+                                    "discount": 80,
+                                    "taxRate": 0.001,
+                                    "fee": 3.1
+                                }
+                            }
+                        ],
+                        "sales": "张三",
+                        "createDate": new Date(2017, 11, 11)
+                    };
+                    return new Schema(dataToAdd).save()
+                        .then(function (obj) {
+                            expect(obj).not.null;
+                        });
+                });
+            });
+
+            it('Db object saver', function () {
+                var dbSchema = new mongoose.Schema({
+                    "foo": String,
+                    "fee": String
+                });
+                Schema = mongoose.model('coll', dbSchema);
+                var save = require('../netup/db/mongoDb/SaveObjectToDb');
+
+                dataToAdd = {foo: "foo", fee: "fee"};
+                return save(Schema, dataToAdd)
+                    .then(function (data) {
+                        expect(data).not.null;
+                    })
+            });
+        });
+
+        describe('业务', function () {
+            describe('ANSteel Sales', function () {
+                var salesOrders, createStub;
+                describe('销售人员草拟订单', function () {
+                    beforeEach(function () {
+                    });
+
+                    it('添加订单失败', function (done) {
+                        var ordersDbModelMock = {mock: "salesorder"};
+                        stubs['../../data/models/salesorder'] = ordersDbModelMock;
+                        var order = {data: "any data of order"};
+                        var createStub = createPromiseStub([ordersDbModelMock, order], null, err);
+                        stubs['../../../../netup/db/mongoDb/SaveObjToDb'] = createStub;
+                        salesOrders = proxyquire('../server/ANSteel/biz/sales/SalesOrders', stubs);
+                        return salesOrders.draft(order)
+                            .catch(function (e) {
+                                expect(e).eql(err);
+                                done();
+                            })
+                    })
+                });
+            });
         });
 
         describe('rests', function () {
