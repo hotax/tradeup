@@ -1126,10 +1126,8 @@ describe('tradup', function () {
                 });
 
                 describe('更新服务', function () {
-                    var handler, reqBody;
+                    var handler;
                     beforeEach(function () {
-                        url = "/foo/:id";
-                        reqBody = {foo: "any request data used to update"};
                         handler = sinon.stub();
                         desc = {
                             type: 'update',
@@ -1139,9 +1137,8 @@ describe('tradup', function () {
                     });
 
                     it('正确响应', function (done) {
-                        handler.withArgs({id: "1234"}, reqBody).returns(Promise.resolve());
-                        request.put("/foo/1234")
-                            .send(reqBody)
+                        handler.returns(Promise.resolve());
+                        request.put(url)
                             .expect(204, done);
                     });
 
@@ -1150,26 +1147,22 @@ describe('tradup', function () {
                         desc.response = {
                             conflict: 409
                         };
-                        handler.withArgs({id: "1234"}, reqBody).returns(Promise.reject(reason));
-                        request.put("/foo/1234")
-                            .send(reqBody)
+                        handler.returns(Promise.reject(reason));
+                        request.put(url)
                             .expect(409, done);
                     });
 
                     it('未能识别的错误返回500内部错', function (done) {
                         err = "foo";
-                        handler.withArgs({id: "1234"}, reqBody).returns(Promise.reject(err));
-                        request.put("/foo/1234")
-                            .send(reqBody)
+                        handler.returns(Promise.reject(err));
+                        request.put(url)
                             .expect(500, err, done);
                     });
                 });
 
                 describe('删除服务', function () {
-                    var handler, params;
+                    var handler;
                     beforeEach(function () {
-                        url = "/foo/:arg1/:arg2";
-                        params = {arg1: "arg1", arg2: "arg2"};
                         handler = sinon.stub();
                         desc = {
                             type: 'delete',
@@ -1179,8 +1172,8 @@ describe('tradup', function () {
                     });
 
                     it('正确响应', function (done) {
-                        handler.withArgs(params).returns(Promise.resolve());
-                        request.delete("/foo/arg1/arg2")
+                        handler.returns(Promise.resolve());
+                        request.delete(url)
                             .expect(204, done);
                     });
 
@@ -1189,16 +1182,15 @@ describe('tradup', function () {
                         desc.response = {
                             conflict: 409
                         };
-                        handler.withArgs(params).returns(Promise.reject(reason));
-                        request.delete("/foo/arg1/arg2")
+                        handler.returns(Promise.reject(reason));
+                        request.delete(url)
                             .expect(409, done);
                     });
 
                     it('未能识别的错误返回500内部错', function (done) {
                         err = "foo";
-                        handler.withArgs(params).returns(Promise.reject(err));
-                        request.delete("/foo/arg1/arg2")
-                            .send(params)
+                        handler.returns(Promise.reject(err));
+                        request.delete(url)
                             .expect(500, err, done);
                     });
                 });
