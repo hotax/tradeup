@@ -16,10 +16,12 @@ module.exports = {
             },
             Sales:{
                 "review draft orders": "DraftOrders",
-                "draft order": 'DraftOrders'
+                "draft order": 'DraftOrders',
+                "exit": "Login"
             },
             DraftOrders:{
-                "draft order": 'DraftOrders'
+                "draft order": 'DraftOrders',
+                "home": "Sales"
             },
             DraftOrder:{
                 self: "DraftOrder",
@@ -28,10 +30,17 @@ module.exports = {
                 "review draft orders": "DraftOrders"
             },
             QualityReviewer:{
-                review: "DraftOrderQualityReviewLine"
+                review: "DraftOrderQualityReviewLine",
+                "exit": "Login"
+            },
+            DraftOrderQualityReviewLine:{
+                "home": "QualityReviewer"
             },
             DraftOrderForQualityReview:{
-                review: "DraftOrderForQualityReview"
+                self: "DraftOrderForQualityReview",
+                review: "DraftOrderForQualityReview",
+                close: "DraftOrderForQualityReview",
+                line: "DraftOrderQualityReviewLine"
             },
             FinacialReviewer:{
                 review: "DraftOrderFinacialReviewLine"

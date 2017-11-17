@@ -2,17 +2,15 @@
  * Created by clx on 2017/10/13.
  */
 
-const line = function () {
-    //return dbSpecifications.search(query);
-}
+const salesOrders = require('../biz/sales/SalesOrders');
 
 module.exports = {
-    url: '/sales/orders/draft/qualityReview',
+    url: '/quality/lines/review/orders/draft',
     rests: [
         {
             type: 'query',
             element: 'DraftOrderForQualityReview',
-            handler: line
+            handler: salesOrders.listDraftsForQualityReview
         }
     ]
 }

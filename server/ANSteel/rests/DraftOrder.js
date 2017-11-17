@@ -4,7 +4,7 @@
 const salesOrders = require('../biz/sales/SalesOrders');
 
 module.exports = {
-    url: '/sales/orders/draft/:id',
+    url: '/sales/orders/:id/draft',
     rests: [
         {
             type: 'read',

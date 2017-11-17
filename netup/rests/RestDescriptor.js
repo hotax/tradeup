@@ -4,6 +4,11 @@
 const MEDIA_TYPE = 'application/vnd.hotex.com+json';
 const URL = require('../express/Url');
 
+const __internalError = function (err) {
+    console.error(err);
+    return res.status(500).send(err);
+};
+
 const handlerMap = {
     entry: function (router, context, urlPattern, restDesc) {
         return router.get(urlPattern, function (req, res) {
@@ -15,7 +20,7 @@ const handlerMap = {
                     });
                 })
                 .catch(function (err) {
-                    return res.status(500).send(err);
+                    return __internalError(err);
                 })
         });
     },
@@ -39,7 +44,7 @@ const handlerMap = {
                     return res.status(201).json(representation);
                 })
                 .catch(function (err) {
-                    return res.status(500).send(err);
+                    return __internalError(err);
                 })
         });
     },
@@ -79,7 +84,7 @@ const handlerMap = {
                     return res.status(200).json(representation);
                 })
                 .catch(function (err) {
-                    return res.status(500).send(err);
+                    return __internalError(err);
                 })
         });
     },
@@ -103,7 +108,7 @@ const handlerMap = {
                     return res.status(200).json(representation);
                 })
                 .catch(function (err) {
-                    return res.status(500).send(err);
+                    return __internalError(err);
                 })
         });
     }

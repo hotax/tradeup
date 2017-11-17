@@ -2,7 +2,7 @@
  * Created by clx on 2017/11/5.
  */
 module.exports = {
-    url: '/sales/roles/finacialReviewer',
+    url: '/roles/finacial/sales/orderDraft/Reviewer',
     rests: [
         {
             type: 'entry'

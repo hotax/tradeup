@@ -2,7 +2,7 @@
  * Created by clx on 2017/10/13.
  */
 module.exports = {
-    url: '/sales/orders/draft/:id/finacialReview',
+    url: '/finacial/lines/review/orders/:id/draft',
     rests: [
         {
             type: 'read',

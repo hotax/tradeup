@@ -7,7 +7,7 @@ const line = function () {
 }
 
 module.exports = {
-    url: '/sales/orders/draft/transportationReview',
+    url: '/transportation/lines/review/orders/draft',
     rests: [
         {
             type: 'query',

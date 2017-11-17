@@ -305,8 +305,10 @@ describe('tradup', function () {
                                 "no": "001",
                                 "product": "优质结构碳素钢",
                                 "spec": "规格1",
-                                "qty": 60,
-                                "unit": "T",
+                                "qty": {
+                                    "value": 60,
+                                    "unit": "T"
+                                },
                                 "transportation": {
                                     "type": "铁运",
                                     "dest": "大连东",
@@ -329,8 +331,10 @@ describe('tradup', function () {
                                 "no": "002",
                                 "product": "优质结构碳素钢",
                                 "spec": "规格2",
-                                "qty": 80,
-                                "unit": "T",
+                                "qty": {
+                                    "value": 80,
+                                    "unit": "T"
+                                },
                                 "transportation": {
                                     "type": "汽运",
                                     "dest": "铁岭",
@@ -431,6 +435,85 @@ describe('tradup', function () {
 
                             it('全部列出', function () {
                                 return salesOrders.listDrafts()
+                                    .then(function (list) {
+                                        delete list.items[0].id;
+                                        delete list.items[1].id;
+                                        expect(list).eql({"items": [fee, foo]});
+                                    });
+                            });
+                        });
+
+                        describe('按标识读取用于质量评审的订单草稿', function () {
+                            var orderInDb, id;
+
+                            beforeEach(function () {
+                                return new orderModel(fooSampleDraftOrder).save()
+                                    .then(function (model) {
+                                        orderInDb = model;
+                                        id = orderInDb.id;
+                                    })
+                            });
+
+                            it('正确读取', function () {
+                                return salesOrders.findDraftForQualityReview(id)
+                                    .then(function (data) {
+                                        expect(fooSampleDraftOrder.orderNo).eql(data.orderNo);
+                                        expect(fooSampleDraftOrder.productLine).eql(data.productLine);
+                                        expect(data.items).eql([
+                                            {
+                                                "no": "001",
+                                                "product": "优质结构碳素钢",
+                                                "spec": "规格1",
+                                                "qty": {
+                                                    "value": 60,
+                                                    "unit": "T"
+                                                },
+                                                "due": {
+                                                    "type": "W",
+                                                    "from": new Date(2018, 11, 1),
+                                                    "to": new Date(2018, 11, 30)
+                                                }
+                                            },
+                                            {
+                                                "no": "002",
+                                                "product": "优质结构碳素钢",
+                                                "spec": "规格2",
+                                                "qty": {
+                                                    "value": 80,
+                                                    "unit": "T"
+                                                },
+                                                "due": {
+                                                    "type": "W",
+                                                    "from": new Date(2018, 12, 1),
+                                                    "to": new Date(2018, 12, 31)
+                                                }
+                                            }
+                                        ]);
+                                    })
+                            })
+                        });
+
+                        describe('列出所有送交质量评审的订单草稿', function () {
+                            var foo, fooid, fooCreateDate;
+                            var fee, feeid, feeCreateDate;
+
+                            beforeEach(function () {
+                                fooCreateDate = new Date(2017, 11, 15);
+                                feeCreateDate = new Date(2017, 11, 16);
+                                foo = {orderNo: "foo", createDate: fooCreateDate};
+                                fee = {orderNo: "fee", createDate: feeCreateDate};
+                                return new orderModel(foo).save()
+                                    .then(function (model) {
+                                        fooid = model.id;
+                                        return new orderModel(fee).save()
+                                            .then(function (model) {
+                                                feeid = model.id;
+                                            })
+                                    })
+                            });
+
+                            it('全部列出', function () {
+                                return salesOrders.listDraftsForQualityReview()
                                     .then(function (list) {
                                         delete list.items[0].id;
                                         delete list.items[1].id;
