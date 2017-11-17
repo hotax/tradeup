@@ -1128,6 +1128,7 @@ describe('tradup', function () {
                 describe('更新服务', function () {
                     var handler, reqBody;
                     beforeEach(function () {
+                        url = "/foo/:id";
                         reqBody = {foo: "any request data used to update"};
                         handler = sinon.stub();
                         desc = {
@@ -1138,8 +1139,8 @@ describe('tradup', function () {
                     });
 
                     it('正确响应', function (done) {
-                        handler.withArgs(reqBody).returns(Promise.resolve());
-                        request.put(url)
+                        handler.withArgs({id: "1234"}, reqBody).returns(Promise.resolve());
+                        request.put("/foo/1234")
                             .send(reqBody)
                             .expect(204, done);
                     });
@@ -1149,16 +1150,16 @@ describe('tradup', function () {
                         desc.response = {
                             conflict: 409
                         };
-                        handler.withArgs(reqBody).returns(Promise.reject(reason));
-                        request.put(url)
+                        handler.withArgs({id: "1234"}, reqBody).returns(Promise.reject(reason));
+                        request.put("/foo/1234")
                             .send(reqBody)
                             .expect(409, done);
                     });
 
                     it('未能识别的错误返回500内部错', function (done) {
                         err = "foo";
-                        handler.withArgs(reqBody).returns(Promise.reject(err));
-                        request.put(url)
+                        handler.withArgs({id: "1234"}, reqBody).returns(Promise.reject(err));
+                        request.put("/foo/1234")
                             .send(reqBody)
                             .expect(500, err, done);
                     });
@@ -1183,7 +1184,7 @@ describe('tradup', function () {
                             .expect(204, done);
                     });
 
-                    it('响应更新失败', function (done) {
+                    it('响应删除失败', function (done) {
                         var reason = "conflict";
                         desc.response = {
                             conflict: 409

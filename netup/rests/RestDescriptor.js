@@ -4,8 +4,8 @@
 const MEDIA_TYPE = 'application/vnd.hotex.com+json';
 const URL = require('../express/Url');
 
-const __updateAndDeleteHandler = function (handler, resMap, data, res) {
-    return handler(data)
+const __updateAndDeleteHandler = function (handler, resMap, res, params, body) {
+    return handler(params, body)
         .then(function () {
             res.status(204).end();
         })
@@ -61,12 +61,12 @@ const handlerMap = {
     },
     update: function (router, context, urlPattern, restDesc) {
         return router.put(urlPattern, function (req, res) {
-            return __updateAndDeleteHandler(restDesc.handler, restDesc.response, req.body, res);
+            return __updateAndDeleteHandler(restDesc.handler, restDesc.response, res, req.params, req.body);
         });
     },
     delete: function (router, context, urlPattern, restDesc) {
         return router.delete(urlPattern, function (req, res) {
-            return __updateAndDeleteHandler(restDesc.handler, restDesc.response, req.params, res);
+            return __updateAndDeleteHandler(restDesc.handler, restDesc.response, res, req.params);
         });
     },
     query: function (router, context, urlPattern, restDesc) {
