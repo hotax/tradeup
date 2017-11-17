@@ -883,6 +883,45 @@ describe('tradup', function () {
                     restDescriptor = proxyquire('../netup/rests/RestDescriptor', stubs);
                 });
 
+                describe('更新服务', function () {
+                    var handler, reqBody;
+                    beforeEach(function () {
+                        reqBody = {foo: "any request data used to update"};
+                        handler = sinon.stub();
+                        desc = {
+                            type: 'update',
+                            handler: handler
+                        };
+                        restDescriptor.attach(app, currentResource, url, desc);
+                    });
+
+                    it('正确响应', function (done) {
+                        handler.withArgs(reqBody).returns(Promise.resolve());
+                        request.put(url)
+                            .send(reqBody)
+                            .expect(204, done);
+                    });
+
+                    it('响应更新失败', function (done) {
+                        var reason = "conflict";
+                        desc.response = {
+                            conflict: 409
+                        };
+                        handler.withArgs(reqBody).returns(Promise.reject(reason));
+                        request.put(url)
+                            .send(reqBody)
+                            .expect(409, done);
+                    });
+
+                    it('未能识别的错误返回500内部错', function (done) {
+                        err = "foo";
+                        handler.withArgs(reqBody).returns(Promise.reject(err));
+                        request.put(url)
+                            .send(reqBody)
+                            .expect(500, err, done);
+                    });
+                });
+
                 describe('入口服务', function () {
                     beforeEach(function () {
                         desc = {

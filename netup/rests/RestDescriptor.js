@@ -4,11 +4,6 @@
 const MEDIA_TYPE = 'application/vnd.hotex.com+json';
 const URL = require('../express/Url');
 
-const __internalError = function (err) {
-    console.error(err);
-    return res.status(500).send(err);
-};
-
 const handlerMap = {
     entry: function (router, context, urlPattern, restDesc) {
         return router.get(urlPattern, function (req, res) {
@@ -20,7 +15,8 @@ const handlerMap = {
                     });
                 })
                 .catch(function (err) {
-                    return __internalError(err);
+                    console.error(err);
+                    return res.status(500).send(err);
                 })
         });
     },
@@ -40,11 +36,27 @@ const handlerMap = {
                         href: urlToCreatedResource
                     };
                     representation[restDesc.target] = targetObject;
-                    if(links.length > 0) representation.links = links;
+                    if (links.length > 0) representation.links = links;
                     return res.status(201).json(representation);
                 })
                 .catch(function (err) {
-                    return __internalError(err);
+                    console.error(err);
+                    return res.status(500).send(err);
+                })
+        });
+    },
+    update: function (router, context, urlPattern, restDesc) {
+        return router.put(urlPattern, function (req, res) {
+            return restDesc.handler(req.body)
+                .then(function () {
+                    res.status(204).end();
+                })
+                .catch(function (reason) {
+                    if (restDesc.response && restDesc.response[reason]) {
+                        return res.status(restDesc.response[reason]).end();
+                    }
+                    console.error(reason);
+                    return res.status(500).send(reason);
                 })
         });
     },
@@ -84,7 +96,8 @@ const handlerMap = {
                     return res.status(200).json(representation);
                 })
                 .catch(function (err) {
-                    return __internalError(err);
+                    console.error(err);
+                    return res.status(500).send(err);
                 })
         });
     },
@@ -108,7 +121,8 @@ const handlerMap = {
                     return res.status(200).json(representation);
                 })
                 .catch(function (err) {
-                    return __internalError(err);
+                    console.error(err);
+                    return res.status(500).send(err);
                 })
         });
     }
