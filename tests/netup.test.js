@@ -883,45 +883,6 @@ describe('tradup', function () {
                     restDescriptor = proxyquire('../netup/rests/RestDescriptor', stubs);
                 });
 
-                describe('更新服务', function () {
-                    var handler, reqBody;
-                    beforeEach(function () {
-                        reqBody = {foo: "any request data used to update"};
-                        handler = sinon.stub();
-                        desc = {
-                            type: 'update',
-                            handler: handler
-                        };
-                        restDescriptor.attach(app, currentResource, url, desc);
-                    });
-
-                    it('正确响应', function (done) {
-                        handler.withArgs(reqBody).returns(Promise.resolve());
-                        request.put(url)
-                            .send(reqBody)
-                            .expect(204, done);
-                    });
-
-                    it('响应更新失败', function (done) {
-                        var reason = "conflict";
-                        desc.response = {
-                            conflict: 409
-                        };
-                        handler.withArgs(reqBody).returns(Promise.reject(reason));
-                        request.put(url)
-                            .send(reqBody)
-                            .expect(409, done);
-                    });
-
-                    it('未能识别的错误返回500内部错', function (done) {
-                        err = "foo";
-                        handler.withArgs(reqBody).returns(Promise.reject(err));
-                        request.put(url)
-                            .send(reqBody)
-                            .expect(500, err, done);
-                    });
-                });
-
                 describe('入口服务', function () {
                     beforeEach(function () {
                         desc = {
@@ -1160,6 +1121,83 @@ describe('tradup', function () {
                         handlerStub.returns(Promise.reject(err));
                         restDescriptor.attach(app, currentResource, url, desc);
                         request.get(url)
+                            .expect(500, err, done);
+                    });
+                });
+
+                describe('更新服务', function () {
+                    var handler, reqBody;
+                    beforeEach(function () {
+                        reqBody = {foo: "any request data used to update"};
+                        handler = sinon.stub();
+                        desc = {
+                            type: 'update',
+                            handler: handler
+                        };
+                        restDescriptor.attach(app, currentResource, url, desc);
+                    });
+
+                    it('正确响应', function (done) {
+                        handler.withArgs(reqBody).returns(Promise.resolve());
+                        request.put(url)
+                            .send(reqBody)
+                            .expect(204, done);
+                    });
+
+                    it('响应更新失败', function (done) {
+                        var reason = "conflict";
+                        desc.response = {
+                            conflict: 409
+                        };
+                        handler.withArgs(reqBody).returns(Promise.reject(reason));
+                        request.put(url)
+                            .send(reqBody)
+                            .expect(409, done);
+                    });
+
+                    it('未能识别的错误返回500内部错', function (done) {
+                        err = "foo";
+                        handler.withArgs(reqBody).returns(Promise.reject(err));
+                        request.put(url)
+                            .send(reqBody)
+                            .expect(500, err, done);
+                    });
+                });
+
+                describe('删除服务', function () {
+                    var handler, params;
+                    beforeEach(function () {
+                        url = "/foo/:arg1/:arg2";
+                        params = {arg1: "arg1", arg2: "arg2"};
+                        handler = sinon.stub();
+                        desc = {
+                            type: 'delete',
+                            handler: handler
+                        };
+                        restDescriptor.attach(app, currentResource, url, desc);
+                    });
+
+                    it('正确响应', function (done) {
+                        handler.withArgs(params).returns(Promise.resolve());
+                        request.delete("/foo/arg1/arg2")
+                            .expect(204, done);
+                    });
+
+                    it('响应更新失败', function (done) {
+                        var reason = "conflict";
+                        desc.response = {
+                            conflict: 409
+                        };
+                        handler.withArgs(params).returns(Promise.reject(reason));
+                        request.delete("/foo/arg1/arg2")
+                            .expect(409, done);
+                    });
+
+                    it('未能识别的错误返回500内部错', function (done) {
+                        err = "foo";
+                        handler.withArgs(params).returns(Promise.reject(err));
+                        request.delete("/foo/arg1/arg2")
+                            .send(params)
                             .expect(500, err, done);
                     });
                 });

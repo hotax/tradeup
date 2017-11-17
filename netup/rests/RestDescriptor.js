@@ -4,6 +4,20 @@
 const MEDIA_TYPE = 'application/vnd.hotex.com+json';
 const URL = require('../express/Url');
 
+const __updateAndDeleteHandler = function (handler, resMap, data, res) {
+    return handler(data)
+        .then(function () {
+            res.status(204).end();
+        })
+        .catch(function (reason) {
+            if (resMap && resMap[reason]) {
+                return res.status(resMap[reason]).end();
+            }
+            console.error(reason);
+            return res.status(500).send(reason);
+        })
+};
+
 const handlerMap = {
     entry: function (router, context, urlPattern, restDesc) {
         return router.get(urlPattern, function (req, res) {
@@ -47,17 +61,12 @@ const handlerMap = {
     },
     update: function (router, context, urlPattern, restDesc) {
         return router.put(urlPattern, function (req, res) {
-            return restDesc.handler(req.body)
-                .then(function () {
-                    res.status(204).end();
-                })
-                .catch(function (reason) {
-                    if (restDesc.response && restDesc.response[reason]) {
-                        return res.status(restDesc.response[reason]).end();
-                    }
-                    console.error(reason);
-                    return res.status(500).send(reason);
-                })
+            return __updateAndDeleteHandler(restDesc.handler, restDesc.response, req.body, res);
+        });
+    },
+    delete: function (router, context, urlPattern, restDesc) {
+        return router.delete(urlPattern, function (req, res) {
+            return __updateAndDeleteHandler(restDesc.handler, restDesc.response, req.params, res);
         });
     },
     query: function (router, context, urlPattern, restDesc) {
