@@ -28,6 +28,12 @@ const PriceSchema = new Schema({
     "fee": Number
 }, transformOption);
 
+const ReviewSchema = new Schema({
+    "opinion": String,
+    "date": Date,
+    "pass": Boolean
+}, transformOption);
+
 const OrderItemSchema = new Schema({
     "no": String,
     "product": String,
@@ -35,7 +41,8 @@ const OrderItemSchema = new Schema({
     "qty": QuantitySchema,
     "transportation": TransportationSchema,
     "due": DueSchema,
-    "price": PriceSchema
+    "price": PriceSchema,
+    "qualityReview": ReviewSchema
 }, transformOption);
 
 const SettlementSchema = new Schema({

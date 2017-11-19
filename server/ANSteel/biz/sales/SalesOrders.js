@@ -5,6 +5,7 @@
 const mongoose = require('mongoose'),
     Schema = mongoose.Schema,
     dbModel = require('../../data/models/salesorder'),
+    genHash = require('../../../../netup/utils/GenHash'),
     saveObjToDb = require('../../../../netup/db/mongoDb/SaveObjectToDb');
 
 const __listDraftFor = function () {
@@ -51,5 +52,26 @@ module.exports = {
     },
     listDraftsForQualityReview: function () {
         return __listDraftFor();
+    },
+    draftQualityReview: function (body) {
+        return dbModel.findById(body.id)
+            .then(function (doc) {
+                var now = Date.now();
+                for(var i=0; i<body.items.length; i++){
+                    var review = body.items[i].qualityReview;
+                    if(review){
+                        review.date = now;
+                    }
+                }
+                var toupdate = {
+                    __v: genHash(now.toString()),
+                    modifiedDate: now,
+                    items: body.items
+                }
+                return doc.update(toupdate);
+            })
+            .catch(function (err) {
+                return err;
+            })
     }
 }

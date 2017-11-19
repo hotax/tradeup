@@ -521,6 +521,71 @@ describe('tradup', function () {
                                     });
                             });
                         });
+
+                        describe("质量评审", function () {
+                            var orderInDb, reviewData;
+
+                            beforeEach(function () {
+                                return new orderModel(fooSampleDraftOrder).save()
+                                    .then(function (model) {
+                                        orderInDb = model;
+                                        reviewData = {
+                                            id: orderInDb.id,
+                                            orderNo: fooSampleDraftOrder.orderNo,
+                                            productLine: fooSampleDraftOrder.productLine,
+                                            items: [
+                                                {
+                                                    "no": "001",
+                                                    "product": "优质结构碳素钢",
+                                                    "spec": "规格1",
+                                                    "qty": {
+                                                        "value": 60,
+                                                        "unit": "T"
+                                                    },
+                                                    "due": {
+                                                        "type": "W",
+                                                        "from": new Date(2018, 11, 1),
+                                                        "to": new Date(2018, 11, 30)
+                                                    }
+                                                },
+                                                {
+                                                    "no": "002",
+                                                    "product": "优质结构碳素钢",
+                                                    "spec": "规格2",
+                                                    "qty": {
+                                                        "value": 80,
+                                                        "unit": "T"
+                                                    },
+                                                    "due": {
+                                                        "type": "W",
+                                                        "from": new Date(2018, 12, 1),
+                                                        "to": new Date(2018, 12, 31)
+                                                    }
+                                                }
+                                            ],
+                                            __v: fooSampleDraftOrder.__v
+                                        }
+                                    })
+                            });
+
+                            it("正确评审", function () {
+                                var opinion = "any opinion to reject ...";
+                                reviewData.items[0].qualityReview = {opinion: opinion};
+                                return salesOrders.draftQualityReview(reviewData)
+                                    .then(function () {
+                                        return orderModel.findById(orderInDb.id);
+                                    })
+                                    .then(function (data) {
+                                        expect(data.orderNo).eql(orderInDb.orderNo);
+                                        expect(data.__v).not.eql(orderInDb.__v);
+                                        expect(data.modifiedDate).not.eql(orderInDb.modifiedDate);
+                                        expect(data.items[0].qualityReview.toJSON()).eql({
+                                            opinion: opinion,
+                                            date: data.modifiedDate
+                                        });
+                                    })
+                            });
+                        })
                     });
                 });
             });
