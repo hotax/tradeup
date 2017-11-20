@@ -33,7 +33,6 @@ module.exports = {
             .then(function (model) {
                 var result = model.toJSON();
                 delete result._id;
-                result.id = model.id;
                 return result;
             })
     },
@@ -42,19 +41,18 @@ module.exports = {
     },
     findDraftForQualityReview: function (id) {
         return dbModel.findById(id, "orderNo productLine items.no " +
-            "items.product items.spec items.qty items.unit items.due")
+            "items.product items.spec items.qty items.unit items.due modifiedDate __v")
             .then(function (model) {
                 var result = model.toJSON();
                 delete result._id;
-                result.id = model.id;
                 return result;
             })
     },
     listDraftsForQualityReview: function () {
         return __listDraftFor();
     },
-    draftQualityReview: function (body) {
-        return dbModel.findById(body.id)
+    draftQualityReview: function (id, body) {
+        return dbModel.findById(id)
             .then(function (doc) {
                 var now = Date.now();
                 for(var i=0; i<body.items.length; i++){

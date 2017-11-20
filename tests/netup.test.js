@@ -369,9 +369,10 @@ describe('tradup', function () {
 
                 describe('业务', function () {
                     describe('销售订单', function () {
-                        var salesOrders, orderModel;
+                        var salesOrders, orderModel, unknownId;
 
                         beforeEach(function () {
+                            unknownId = '5a122f18d1eb023b18a9cda2';
                             orderModel = require('../server/ANSteel/data/models/salesorder');
                             salesOrders = proxyquire('../server/ANSteel/biz/sales/SalesOrders', stubs);
                         });
@@ -408,8 +409,10 @@ describe('tradup', function () {
                             it('正确读取', function () {
                                 return salesOrders.findById(id)
                                     .then(function (data) {
-                                        expect(data).not.null;
-                                        //expect(data).eql({});
+                                        expect(data.id).undefined;
+                                        expect(data.orderNo).eql(orderInDb.orderNo);
+                                        expect(data.modifiedDate).eql(orderInDb.modifiedDate);
+                                        expect(data.__v).eql(orderInDb.__v);
                                     })
                             })
                         });
@@ -457,6 +460,9 @@ describe('tradup', function () {
                             it('正确读取', function () {
                                 return salesOrders.findDraftForQualityReview(id)
                                     .then(function (data) {
+                                        expect(data.id).undefined;
+                                        expect(data.modifiedDate).eql(orderInDb.modifiedDate);
+                                        expect(data.__v).eql(orderInDb.__v);
                                         expect(fooSampleDraftOrder.orderNo).eql(data.orderNo);
                                         expect(fooSampleDraftOrder.productLine).eql(data.productLine);
                                         expect(data.items).eql([
@@ -530,7 +536,6 @@ describe('tradup', function () {
                                     .then(function (model) {
                                         orderInDb = model;
                                         reviewData = {
-                                            id: orderInDb.id,
                                             orderNo: fooSampleDraftOrder.orderNo,
                                             productLine: fooSampleDraftOrder.productLine,
                                             items: [
@@ -571,7 +576,7 @@ describe('tradup', function () {
                             it("正确评审", function () {
                                 var opinion = "any opinion to reject ...";
                                 reviewData.items[0].qualityReview = {opinion: opinion};
-                                return salesOrders.draftQualityReview(reviewData)
+                                return salesOrders.draftQualityReview(orderInDb.id, reviewData)
                                     .then(function () {
                                         return orderModel.findById(orderInDb.id);
                                     })
@@ -722,6 +727,34 @@ describe('tradup', function () {
                             }
                         };
                         salesOrders.findById.withArgs(orderId).returns(Promise.resolve(order));
+                        return handler(req, res)
+                            .then(function (data) {
+                                expect(data).eql(order);
+                            })
+                    })
+                });
+
+                describe('订单质量评审人员需要能够获得评审材料', function () {
+                    var salesOrders;
+                    beforeEach(function () {
+                        salesOrders = {
+                            findDraftForQualityReview: function (id) {
+                            }
+                        };
+                        salesOrders = sinon.stub(salesOrders);
+                        stubs['../biz/sales/SalesOrders'] = salesOrders;
+                        handler = proxyquire('../server/ANSteel/rests/DraftOrderForQualityReview', stubs).rests[0].handler;
+                    });
+
+                    it('成功获得指定的订单质量评审材料', function () {
+                        var orderId = '4355rffss';
+                        var order = {order: 'any order data'};
+                        req = {
+                            params: {
+                                id: orderId
+                            }
+                        };
+                        salesOrders.findDraftForQualityReview.withArgs(orderId).returns(Promise.resolve(order));
                         return handler(req, res)
                             .then(function (data) {
                                 expect(data).eql(order);

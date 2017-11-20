@@ -16,10 +16,9 @@ module.exports = {
         {
             type: 'update',
             handler: function (req, res) {
-                //TODO:应该检查req.params["id"]同body.id是否一致
-                //var id = req.params["id"];
+                var id = req.params["id"];
                 var body = req.body;
-                return salesOrders.draftQualityReview(body);
+                return salesOrders.draftQualityReview(id, body);
             }
         }
     ]
