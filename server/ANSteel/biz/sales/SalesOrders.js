@@ -52,21 +52,25 @@ module.exports = {
         return __listDraftFor();
     },
     draftQualityReview: function (id, body) {
+        var toupdate;
         return dbModel.findById(id)
             .then(function (doc) {
-                var now = Date.now();
+                var now = new Date(Date.now());
                 for(var i=0; i<body.items.length; i++){
                     var review = body.items[i].qualityReview;
                     if(review){
                         review.date = now;
                     }
                 }
-                var toupdate = {
+                toupdate = {
                     __v: genHash(now.toString()),
                     modifiedDate: now,
                     items: body.items
                 }
                 return doc.update(toupdate);
+            })
+            .then(function () {
+                return toupdate;
             })
             .catch(function (err) {
                 return err;

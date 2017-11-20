@@ -576,14 +576,18 @@ describe('tradup', function () {
                             it("正确评审", function () {
                                 var opinion = "any opinion to reject ...";
                                 reviewData.items[0].qualityReview = {opinion: opinion};
+                                var versionAfterReview;
                                 return salesOrders.draftQualityReview(orderInDb.id, reviewData)
-                                    .then(function () {
+                                    .then(function (data) {
+                                        versionAfterReview = data;
                                         return orderModel.findById(orderInDb.id);
                                     })
                                     .then(function (data) {
                                         expect(data.orderNo).eql(orderInDb.orderNo);
                                         expect(data.__v).not.eql(orderInDb.__v);
+                                        expect(data.__v).eql(versionAfterReview.__v);
                                         expect(data.modifiedDate).not.eql(orderInDb.modifiedDate);
+                                        expect(data.modifiedDate).eql(versionAfterReview.modifiedDate);
                                         expect(data.items[0].qualityReview.toJSON()).eql({
                                             opinion: opinion,
                                             date: data.modifiedDate
