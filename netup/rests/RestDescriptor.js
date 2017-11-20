@@ -4,20 +4,6 @@
 const MEDIA_TYPE = 'application/vnd.hotex.com+json';
 const URL = require('../express/Url');
 
-const __updateAndDeleteHandler = function (handler, resMap, req, res) {
-    return handler(req, res)
-        .then(function () {
-            res.status(204).end();
-        })
-        .catch(function (reason) {
-            if (resMap && resMap[reason]) {
-                return res.status(resMap[reason]).end();
-            }
-            console.error(reason);
-            return res.status(500).send(reason);
-        })
-};
-
 const handlerMap = {
     entry: function (router, context, urlPattern, restDesc) {
         return router.get(urlPattern, function (req, res) {
@@ -61,12 +47,39 @@ const handlerMap = {
     },
     update: function (router, context, urlPattern, restDesc) {
         return router.put(urlPattern, function (req, res) {
-            return __updateAndDeleteHandler(restDesc.handler, restDesc.response, req, res);
+            return restDesc.handler(req, res)
+                .then(function (data) {
+                    if(!data || !data.__v || !data.modifiedDate){
+                        return Promise.reject("handler did not promise any state version info ....");
+                    }
+                    if (data) {
+                        if(data.__v) res.set('ETag', data.__v);
+                        if(data.modifiedDate) res.set('Last-Modified', data.modifiedDate.toJSON());
+                    }
+                    res.status(204).end();
+                })
+                .catch(function (reason) {
+                    if (restDesc.response && restDesc.response[reason]) {
+                        return res.status(restDesc.response[reason]).end();
+                    }
+                    console.error(reason);
+                    return res.status(500).send(reason);
+                })
         });
     },
     delete: function (router, context, urlPattern, restDesc) {
         return router.delete(urlPattern, function (req, res) {
-            return __updateAndDeleteHandler(restDesc.handler, restDesc.response, req, res);
+            return restDesc.handler(req, res)
+                .then(function () {
+                    res.status(204).end();
+                })
+                .catch(function (reason) {
+                    if (restDesc.response && restDesc.response[reason]) {
+                        return res.status(restDesc.response[reason]).end();
+                    }
+                    console.error(reason);
+                    return res.status(500).send(reason);
+                })
         });
     },
     query: function (router, context, urlPattern, restDesc) {
@@ -122,6 +135,7 @@ const handlerMap = {
                     representation[context.getResourceId()] = data;
                     res.set('ETag', data.__v);
                     delete data.__v;
+                    if(data.modifiedDate) res.set('Last-Modified', data.modifiedDate.valueOf());
                     return context.getLinks(data, req);
                 })
                 .then(function (links) {

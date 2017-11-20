@@ -1161,10 +1161,11 @@ describe('tradup', function () {
                 });
 
                 describe('读取资源状态服务', function () {
-                    var resourceId, handlerStub, objRead, version;
+                    var resourceId, handlerStub, objRead, version, modifiedDate;
                     beforeEach(function () {
                         resourceId = "fuuuu";
                         version = "123456";
+                        modifiedDate = new Date(2017, 10, 10);
                         handlerStub = sinon.stub();
                         desc = {
                             type: 'read',
@@ -1179,6 +1180,7 @@ describe('tradup', function () {
                             id: 'fooid',
                             foo: 'foo',
                             fee: 'fee',
+                            modifiedDate: modifiedDate,
                             __v: version
                         };
                         handlerStub.returns(Promise.resolve(objRead));
@@ -1196,6 +1198,7 @@ describe('tradup', function () {
 
                         var representedObject = Object.assign({}, objRead);
                         delete representedObject.__v;
+                        representedObject.modifiedDate = modifiedDate.toJSON();
                         var representation = {
                             href: selfUrl,
                             links: expectedLinks
@@ -1212,7 +1215,8 @@ describe('tradup', function () {
                         request.get(url)
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
                             .expect('ETag', version)
-                            .expect(200, representation, done);
+                            .expect('Last-Modified', modifiedDate.valueOf().toString())
+                            .expect(200, representation, done)
                     });
 
                     it('未知错误返回500内部错', function (done) {
@@ -1234,9 +1238,23 @@ describe('tradup', function () {
                         restDescriptor.attach(app, currentResource, url, desc);
                     });
 
-                    it('正确响应', function (done) {
+                    it('handler未返回任何资源最新状态控制信息', function (done) {
+                        err = "handler did not promise any state version info ....";
                         handler.returns(Promise.resolve());
                         request.put(url)
+                            .expect(500, err, done);
+                    });
+
+                    it('正确响应', function (done) {
+                        var version = "agdsbcbs";
+                        var modifiedDate = new Date(2017, 11, 11);
+                        handler.returns(Promise.resolve({
+                            __v: version,
+                            modifiedDate: modifiedDate
+                        }));
+                        request.put(url)
+                            .expect("ETag", version)
+                            .expect("Last-Modified", modifiedDate.toJSON())
                             .expect(204, done);
                     });
 
