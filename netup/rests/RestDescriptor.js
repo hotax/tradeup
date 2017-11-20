@@ -1,7 +1,8 @@
 /**
  * Created by clx on 2017/10/13.
  */
-const MEDIA_TYPE = 'application/vnd.hotex.com+json';
+const MEDIA_TYPE = 'application/vnd.hotex.com+json',
+    REASON_IF_MATCH = 'if-match';
 const URL = require('../express/Url');
 
 const handlerMap = {
@@ -47,7 +48,14 @@ const handlerMap = {
     },
     update: function (router, context, urlPattern, restDesc) {
         return router.put(urlPattern, function (req, res) {
-            return restDesc.handler(req, res)
+            var id = req.params["id"];
+            var etag = req.get("If-Match");
+            var aPromis = etag ? restDesc.handler.condition(id, etag) : Promise.resolve();
+            return aPromis
+                .then(function () {
+                    var body = req.body;
+                    return restDesc.handler.handle(id, body);
+                })
                 .then(function (data) {
                     if(!data || !data.__v || !data.modifiedDate){
                         return Promise.reject("handler did not promise any state version info ....");
@@ -56,12 +64,15 @@ const handlerMap = {
                         if(data.__v) res.set('ETag', data.__v);
                         if(data.modifiedDate) res.set('Last-Modified', data.modifiedDate.toJSON());
                     }
-                    res.status(204).end();
+                    return res.status(204).end();
                 })
                 .catch(function (reason) {
-                    if (restDesc.response && restDesc.response[reason]) {
-                        return res.status(restDesc.response[reason]).end();
-                    }
+                    if(reason.toLowerCase() === REASON_IF_MATCH)
+                        return res.status(412).end();
+                    if (restDesc.response && restDesc.response[reason])
+                        return res.status(restDesc.response[reason].code)
+                            .send(restDesc.response[reason].err)
+                            .end();
                     console.error(reason);
                     return res.status(500).send(reason);
                 })

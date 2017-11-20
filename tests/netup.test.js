@@ -1232,31 +1232,63 @@ describe('tradup', function () {
                 });
 
                 describe('更新服务', function () {
-                    var handler;
+                    var handler, id, version, body, doc, modifiedDate;
                     beforeEach(function () {
-                        handler = sinon.stub();
+                        handler = sinon.stub({
+                            condition: function (id, version) {},
+                            handle: function (doc, body) {}
+                        });
                         desc = {
                             type: 'update',
                             handler: handler
                         };
+                        url = "/url/:id";
+                        id = "foo";
+                        version = "12345df";
+                        modifiedDate = new Date(2017, 11, 11);
+                        body = {body: "any data to update"};
+                        doc = {doc: "doc identified by id"};
                         restDescriptor.attach(app, currentResource, url, desc);
                     });
 
-                    it('handler未返回任何资源最新状态控制信息', function (done) {
+                    it('不满足请求条件', function (done) {
+                        handler.condition.withArgs(id, version).returns(Promise.reject("If-Match"));
+                        request.put("/url/" + id)
+                            .set("If-Match", version)
+                            .expect(412, done);
+                    });
+
+                    it('满足请求条件, 但handle未返回任何资源最新状态控制信息', function (done) {
+                        handler.condition.withArgs(id, version).returns(Promise.resolve());
                         err = "handler did not promise any state version info ....";
-                        handler.returns(Promise.resolve());
-                        request.put(url)
+                        handler.handle.withArgs(id, body).returns(Promise.resolve({}));
+                        request.put("/url/" + id)
+                            .set("If-Match", version)
+                            .send(body)
                             .expect(500, err, done);
                     });
 
-                    it('正确响应', function (done) {
-                        var version = "agdsbcbs";
-                        var modifiedDate = new Date(2017, 11, 11);
-                        handler.returns(Promise.resolve({
+                    it('满足请求条件, 并正确响应', function (done) {
+                        handler.condition.withArgs(id, version).returns(Promise.resolve());
+                        handler.handle.returns(Promise.resolve({
                             __v: version,
                             modifiedDate: modifiedDate
                         }));
-                        request.put(url)
+                        request.put("/url/" + id)
+                            .set("If-Match", version)
+                            .send(body)
+                            .expect("ETag", version)
+                            .expect("Last-Modified", modifiedDate.toJSON())
+                            .expect(204, done);
+                    });
+
+                    it('无请求条件, 正确响应', function (done) {
+                        handler.handle.withArgs(id, body).returns(Promise.resolve({
+                            __v: version,
+                            modifiedDate: modifiedDate
+                        }));
+                        request.put("/url/" + id)
+                            .send(body)
                             .expect("ETag", version)
                             .expect("Last-Modified", modifiedDate.toJSON())
                             .expect(204, done);
@@ -1265,16 +1297,20 @@ describe('tradup', function () {
                     it('响应更新失败', function (done) {
                         var reason = "conflict";
                         desc.response = {
-                            conflict: 409
+                            conflict: {
+                                code: 409,
+                                err: "here is the cause"
+                            }
                         };
-                        handler.returns(Promise.reject(reason));
-                        request.put(url)
-                            .expect(409, done);
+                        handler.handle.withArgs(id, body).returns(Promise.reject(reason));
+                        request.put("/url/" + id)
+                            .send(body)
+                            .expect(409, "here is the cause", done);
                     });
 
                     it('未能识别的错误返回500内部错', function (done) {
                         err = "foo";
-                        handler.returns(Promise.reject(err));
+                        handler.handle.returns(Promise.reject(err));
                         request.put(url)
                             .expect(500, err, done);
                     });
