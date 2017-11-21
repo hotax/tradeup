@@ -2,7 +2,11 @@
  * Created by clx on 2017/10/13.
  */
 const MEDIA_TYPE = 'application/vnd.hotex.com+json',
-    REASON_IF_MATCH = 'if-match';
+    REASON_IF_MATCH = 'if-match',
+    REASON_NOTHING = 'nothing',
+    REASON_CONCURRENT_CONFLICT = 'concurrent-conflict',
+    REASON_NOT_FOUND = 'not-found';
+
 const URL = require('../express/Url');
 
 const handlerMap = {
@@ -50,25 +54,30 @@ const handlerMap = {
         return router.put(urlPattern, function (req, res) {
             var id = req.params["id"];
             var etag = req.get("If-Match");
-            var aPromis = etag ? restDesc.handler.condition(id, etag) : Promise.resolve();
+            var aPromis = etag ? restDesc.handler.condition(id, etag) : Promise.resolve(true);
             return aPromis
-                .then(function () {
+                .then(function (data) {
+                    if (!data) return Promise.reject(REASON_IF_MATCH);
                     var body = req.body;
                     return restDesc.handler.handle(id, body);
                 })
                 .then(function (data) {
-                    if(!data || !data.__v || !data.modifiedDate){
+                    if (!data || !data.__v && !data.modifiedDate) {
                         return Promise.reject("handler did not promise any state version info ....");
                     }
-                    if (data) {
-                        if(data.__v) res.set('ETag', data.__v);
-                        if(data.modifiedDate) res.set('Last-Modified', data.modifiedDate.toJSON());
-                    }
+                    if (data.__v) res.set('ETag', data.__v);
+                    if (data.modifiedDate) res.set('Last-Modified', data.modifiedDate.toJSON());
                     return res.status(204).end();
                 })
                 .catch(function (reason) {
-                    if(reason.toLowerCase() === REASON_IF_MATCH)
+                    if (reason.toLowerCase() === REASON_IF_MATCH)
                         return res.status(412).end();
+                    if(reason.toLowerCase() === REASON_NOT_FOUND)
+                        return res.status(404).end();//Concurrent-Conflict
+                    if(reason.toLowerCase() === REASON_CONCURRENT_CONFLICT)
+                        return res.status(304).end();
+                    if(reason.toLowerCase() === REASON_NOTHING)
+                        return res.status(204).end();
                     if (restDesc.response && restDesc.response[reason])
                         return res.status(restDesc.response[reason].code)
                             .send(restDesc.response[reason].err)
@@ -145,8 +154,7 @@ const handlerMap = {
                     };
                     representation[context.getResourceId()] = data;
                     res.set('ETag', data.__v);
-                    delete data.__v;
-                    if(data.modifiedDate) res.set('Last-Modified', data.modifiedDate.valueOf());
+                    if (data.modifiedDate) res.set('Last-Modified', data.modifiedDate);
                     return context.getLinks(data, req);
                 })
                 .then(function (links) {

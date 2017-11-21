@@ -325,7 +325,8 @@ describe('tradup', function () {
                                     "discount": 80,
                                     "taxRate": 0.001,
                                     "fee": 0.52
-                                }
+                                },
+                                qualityReview: {opinion: "foo opinion"}
                             },
                             {
                                 "no": "002",
@@ -411,7 +412,7 @@ describe('tradup', function () {
                                     .then(function (data) {
                                         expect(data.id).undefined;
                                         expect(data.orderNo).eql(orderInDb.orderNo);
-                                        expect(data.modifiedDate).eql(orderInDb.modifiedDate);
+                                        expect(data.modifiedDate).eql(orderInDb.modifiedDate.toJSON());
                                         expect(data.__v).eql(orderInDb.__v);
                                     })
                             })
@@ -422,8 +423,8 @@ describe('tradup', function () {
                             var fee, feeid, feeCreateDate;
 
                             beforeEach(function () {
-                                fooCreateDate = new Date(2017, 11, 15);
-                                feeCreateDate = new Date(2017, 11, 16);
+                                fooCreateDate = new Date(2017, 11, 15).toJSON();
+                                feeCreateDate = new Date(2017, 11, 16).toJSON();
                                 foo = {orderNo: "foo", createDate: fooCreateDate};
                                 fee = {orderNo: "fee", createDate: feeCreateDate};
                                 return new orderModel(foo).save()
@@ -461,7 +462,7 @@ describe('tradup', function () {
                                 return salesOrders.findDraftForQualityReview(id)
                                     .then(function (data) {
                                         expect(data.id).undefined;
-                                        expect(data.modifiedDate).eql(orderInDb.modifiedDate);
+                                        expect(data.modifiedDate).eql(orderInDb.modifiedDate.toJSON());
                                         expect(data.__v).eql(orderInDb.__v);
                                         expect(fooSampleDraftOrder.orderNo).eql(data.orderNo);
                                         expect(fooSampleDraftOrder.productLine).eql(data.productLine);
@@ -476,8 +477,11 @@ describe('tradup', function () {
                                                 },
                                                 "due": {
                                                     "type": "W",
-                                                    "from": new Date(2018, 11, 1),
-                                                    "to": new Date(2018, 11, 30)
+                                                    "from": new Date(2018, 11, 1).toJSON(),
+                                                    "to": new Date(2018, 11, 30).toJSON()
+                                                },
+                                                "qualityReview": {
+                                                    "opinion": "foo opinion"
                                                 }
                                             },
                                             {
@@ -490,8 +494,8 @@ describe('tradup', function () {
                                                 },
                                                 "due": {
                                                     "type": "W",
-                                                    "from": new Date(2018, 12, 1),
-                                                    "to": new Date(2018, 12, 31)
+                                                    "from": new Date(2018, 12, 1).toJSON(),
+                                                    "to": new Date(2018, 12, 31).toJSON()
                                                 }
                                             }
                                         ]);
@@ -504,8 +508,8 @@ describe('tradup', function () {
                             var fee, feeid, feeCreateDate;
 
                             beforeEach(function () {
-                                fooCreateDate = new Date(2017, 11, 15);
-                                feeCreateDate = new Date(2017, 11, 16);
+                                fooCreateDate = new Date(2017, 11, 15).toJSON();
+                                feeCreateDate = new Date(2017, 11, 16).toJSON();
                                 foo = {orderNo: "foo", createDate: fooCreateDate};
                                 fee = {orderNo: "fee", createDate: feeCreateDate};
                                 return new orderModel(foo).save()
@@ -549,8 +553,8 @@ describe('tradup', function () {
                                                     },
                                                     "due": {
                                                         "type": "W",
-                                                        "from": new Date(2018, 11, 1),
-                                                        "to": new Date(2018, 11, 30)
+                                                        "from": new Date(2018, 11, 1).toJSON(),
+                                                        "to": new Date(2018, 11, 30).toJSON()
                                                     }
                                                 },
                                                 {
@@ -563,36 +567,87 @@ describe('tradup', function () {
                                                     },
                                                     "due": {
                                                         "type": "W",
-                                                        "from": new Date(2018, 12, 1),
-                                                        "to": new Date(2018, 12, 31)
+                                                        "from": new Date(2018, 12, 1).toJSON(),
+                                                        "to": new Date(2018, 12, 31).toJSON()
                                                     }
                                                 }
                                             ],
-                                            __v: fooSampleDraftOrder.__v
+                                            modifiedDate: orderInDb.modifiedDate.toJSON(),
+                                            __v: orderInDb.__v
                                         }
                                     })
                             });
 
-                            it("正确评审", function () {
-                                var opinion = "any opinion to reject ...";
-                                reviewData.items[0].qualityReview = {opinion: opinion};
-                                var versionAfterReview;
-                                return salesOrders.draftQualityReview(orderInDb.id, reviewData)
-                                    .then(function (data) {
-                                        versionAfterReview = data;
-                                        return orderModel.findById(orderInDb.id);
-                                    })
-                                    .then(function (data) {
-                                        expect(data.orderNo).eql(orderInDb.orderNo);
-                                        expect(data.__v).not.eql(orderInDb.__v);
-                                        expect(data.__v).eql(versionAfterReview.__v);
-                                        expect(data.modifiedDate).not.eql(orderInDb.modifiedDate);
-                                        expect(data.modifiedDate).eql(versionAfterReview.modifiedDate);
-                                        expect(data.items[0].qualityReview.toJSON()).eql({
-                                            opinion: opinion,
-                                            date: data.modifiedDate
-                                        });
-                                    })
+                            describe("版本检查", function () {
+                                it("版本检查-未找到文档", function () {
+                                    return salesOrders.checkVersion(unknownId, orderInDb.__v)
+                                        .then(function (exist) {
+                                            expect(exist).eql(false);
+                                        })
+                                });
+
+                                it("版本检查-版本不符", function () {
+                                    return salesOrders.checkVersion(orderInDb.id, -1)
+                                        .then(function (exist) {
+                                            expect(exist).eql(false);
+                                        })
+                                });
+
+                                it("通过版本检查", function () {
+                                    return salesOrders.checkVersion(orderInDb.id, orderInDb.__v)
+                                        .then(function (exist) {
+                                            expect(exist).eql(true);
+                                        })
+                                });
+                            });
+
+                            describe("更新评审内容", function () {
+                                it("未找到文档", function () {
+                                    return salesOrders.draftQualityReview(unknownId)
+                                        .catch(function (err) {
+                                            expect(err).eql("Not-Found");
+                                        })
+                                });
+
+                                it("文档状态不一致", function () {
+                                    reviewData.items[0].qty.value = 100;
+                                    return salesOrders.draftQualityReview(orderInDb.id, reviewData)
+                                        .catch(function (err) {
+                                            expect(err).eql("Concurrent-Conflict");
+                                        })
+                                });
+
+                                it("无新的评审内容需要更新", function () {
+                                    reviewData.items[0].qualityReview = {
+                                        "opinion": "foo opinion"
+                                    };
+                                    return salesOrders.draftQualityReview(orderInDb.id, reviewData)
+                                        .catch(function (err) {
+                                            expect(err).eql("Nothing");
+                                        })
+                                });
+
+                                it("正确提交评审", function () {
+                                    var qualityReview = {
+                                        "opinion": "foo opinion something changed ...."
+                                    };
+                                    reviewData.items[0].qualityReview = qualityReview;
+                                    var updateResult;
+                                    return salesOrders.draftQualityReview(orderInDb.id, reviewData)
+                                        .then(function (data) {
+                                            updateResult = data;
+                                            return orderModel.findById(orderInDb.id);
+                                        })
+                                        .then(function (data) {
+                                            expect(data.orderNo).eql(orderInDb.orderNo);
+                                            expect(data.__v).not.eql(orderInDb.__v);
+                                            expect(data.__v).eql(updateResult.__v);
+                                            expect(data.modifiedDate).not.eql(orderInDb.modifiedDate);
+                                            expect(data.modifiedDate).eql(updateResult.modifiedDate);
+                                            expect(data.items[0].qualityReview.toJSON())
+                                                .eql(qualityReview);
+                                        })
+                                });
                             });
                         })
                     });
@@ -1169,7 +1224,7 @@ describe('tradup', function () {
                     beforeEach(function () {
                         resourceId = "fuuuu";
                         version = "123456";
-                        modifiedDate = new Date(2017, 10, 10);
+                        modifiedDate = new Date(2017, 10, 10).toJSON();
                         handlerStub = sinon.stub();
                         desc = {
                             type: 'read',
@@ -1201,8 +1256,7 @@ describe('tradup', function () {
                             });
 
                         var representedObject = Object.assign({}, objRead);
-                        delete representedObject.__v;
-                        representedObject.modifiedDate = modifiedDate.toJSON();
+                        representedObject.modifiedDate = modifiedDate;
                         var representation = {
                             href: selfUrl,
                             links: expectedLinks
@@ -1219,7 +1273,7 @@ describe('tradup', function () {
                         request.get(url)
                             .expect('Content-Type', 'application/vnd.hotex.com+json; charset=utf-8')
                             .expect('ETag', version)
-                            .expect('Last-Modified', modifiedDate.valueOf().toString())
+                            .expect('Last-Modified', modifiedDate)
                             .expect(200, representation, done)
                     });
 
@@ -1235,8 +1289,10 @@ describe('tradup', function () {
                     var handler, id, version, body, doc, modifiedDate;
                     beforeEach(function () {
                         handler = sinon.stub({
-                            condition: function (id, version) {},
-                            handle: function (doc, body) {}
+                            condition: function (id, version) {
+                            },
+                            handle: function (doc, body) {
+                            }
                         });
                         desc = {
                             type: 'update',
@@ -1252,14 +1308,14 @@ describe('tradup', function () {
                     });
 
                     it('不满足请求条件', function (done) {
-                        handler.condition.withArgs(id, version).returns(Promise.reject("If-Match"));
+                        handler.condition.withArgs(id, version).returns(Promise.resolve(false));
                         request.put("/url/" + id)
                             .set("If-Match", version)
                             .expect(412, done);
                     });
 
                     it('满足请求条件, 但handle未返回任何资源最新状态控制信息', function (done) {
-                        handler.condition.withArgs(id, version).returns(Promise.resolve());
+                        handler.condition.withArgs(id, version).returns(Promise.resolve(true));
                         err = "handler did not promise any state version info ....";
                         handler.handle.withArgs(id, body).returns(Promise.resolve({}));
                         request.put("/url/" + id)
@@ -1269,7 +1325,7 @@ describe('tradup', function () {
                     });
 
                     it('满足请求条件, 并正确响应', function (done) {
-                        handler.condition.withArgs(id, version).returns(Promise.resolve());
+                        handler.condition.withArgs(id, version).returns(Promise.resolve(true));
                         handler.handle.returns(Promise.resolve({
                             __v: version,
                             modifiedDate: modifiedDate
@@ -1282,15 +1338,27 @@ describe('tradup', function () {
                             .expect(204, done);
                     });
 
-                    it('无请求条件, 正确响应', function (done) {
-                        handler.handle.withArgs(id, body).returns(Promise.resolve({
-                            __v: version,
-                            modifiedDate: modifiedDate
-                        }));
+                    it('未找到文档', function (done) {
+                        var reason = "Not-Found";
+                        handler.handle.withArgs(id, body).returns(Promise.reject(reason));
                         request.put("/url/" + id)
                             .send(body)
-                            .expect("ETag", version)
-                            .expect("Last-Modified", modifiedDate.toJSON())
+                            .expect(404, done);
+                    });
+
+                    it("文档状态不一致无新的评审内容需要更新", function (done) {
+                        var reason = "Concurrent-Conflict";
+                        handler.handle.withArgs(id, body).returns(Promise.reject(reason));
+                        request.put("/url/" + id)
+                            .send(body)
+                            .expect(304, done);
+                    });
+
+                    it("无新的评审内容需要更新", function (done) {
+                        var reason = "Nothing";
+                        handler.handle.withArgs(id, body).returns(Promise.reject(reason));
+                        request.put("/url/" + id)
+                            .send(body)
                             .expect(204, done);
                     });
 
@@ -1307,6 +1375,20 @@ describe('tradup', function () {
                             .send(body)
                             .expect(409, "here is the cause", done);
                     });
+
+                    it('无请求条件, 正确响应', function (done) {
+                        handler.handle.withArgs(id, body).returns(Promise.resolve({
+                            __v: version,
+                            modifiedDate: modifiedDate
+                        }));
+                        request.put("/url/" + id)
+                            .send(body)
+                            .expect("ETag", version)
+                            .expect("Last-Modified", modifiedDate.toJSON())
+                            .expect(204, done);
+                    });
+
+
 
                     it('未能识别的错误返回500内部错', function (done) {
                         err = "foo";
