@@ -15,10 +15,12 @@ module.exports = {
         },
         {
             type: 'update',
-            handler: function (req, res) {
-                var id = req.params["id"];
-                var body = req.body;
-                return salesOrders.draftQualityReview(id, body);
+            handler: {
+                condition: salesOrders.checkVersion,
+                handle: salesOrders.draftQualityReview
+                /*handle:function (id, body) {
+                 return salesOrders.draftQualityReview(id, body)
+                 }*/
             }
         }
     ]

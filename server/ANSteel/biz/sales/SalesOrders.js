@@ -5,6 +5,7 @@
 const mongoose = require('mongoose'),
     Schema = mongoose.Schema,
     dbModel = require('../../data/models/salesorder'),
+    deepEqual = require('deep-equal'),
     genHash = require('../../../../netup/utils/GenHash'),
     saveObjToDb = require('../../../../netup/db/mongoDb/SaveObjectToDb');
 
@@ -23,8 +24,24 @@ const __listDraftFor = function () {
             return {items: dataAfterHandled};
         });
 };
+const __fieldsForQualityReview = "orderNo productLine items.no " +
+    "items.product items.spec items.qty items.due " +
+    "items.qualityReview modifiedDate __v";
+const __findDraftForQualityReview = function (id) {
+    return dbModel.findById(id, __fieldsForQualityReview)
+        .then(function (model) {
+            var result = model.toJSON();
+            return result;
+        })
+};
 
 module.exports = {
+    checkVersion: function (id, version) {
+        return dbModel.count({_id: id, __v: version})
+            .then(function (count) {
+                return count === 1;
+            })
+    },
     draft: function (data) {
         return saveObjToDb(dbModel, data);
     },
@@ -40,40 +57,48 @@ module.exports = {
         return __listDraftFor();
     },
     findDraftForQualityReview: function (id) {
-        return dbModel.findById(id, "orderNo productLine items.no " +
-            "items.product items.spec items.qty items.unit items.due modifiedDate __v")
-            .then(function (model) {
-                var result = model.toJSON();
-                delete result._id;
-                return result;
-            })
+        return __findDraftForQualityReview(id);
     },
     listDraftsForQualityReview: function () {
         return __listDraftFor();
     },
     draftQualityReview: function (id, body) {
-        var toupdate;
-        return dbModel.findById(id)
-            .then(function (doc) {
-                var now = new Date(Date.now());
-                for(var i=0; i<body.items.length; i++){
-                    var review = body.items[i].qualityReview;
-                    if(review){
-                        review.date = now;
+        var doc, current;
+        var newVersion;
+        return dbModel.findById(id, __fieldsForQualityReview)
+            .then(function (data) {
+                if (!data) return Promise.reject("Not-Found");
+                doc = data;
+                current = doc.toJSON();
+                var reviews = [];
+                var currentReviews = [];
+                for (var i = 0; i < body.items.length; i++) {
+                    reviews[i] = body.items[i].qualityReview;
+                    currentReviews[i] = current.items[i].qualityReview;
+                    delete body.items[i].qualityReview;
+                    delete current.items[i].qualityReview;
+                }
+                if (!deepEqual(current, body)) return Promise.reject("Concurrent-Conflict");
+                var needUpdate = false;
+                for (var i = 0; i < reviews.length; i++) {
+                    if (!deepEqual(currentReviews[i], reviews[i])) {
+                        doc.items[i].qualityReview = reviews[i];
+                        needUpdate = true;
                     }
                 }
-                toupdate = {
-                    __v: genHash(now.toString()),
-                    modifiedDate: now,
-                    items: body.items
+                if (!needUpdate) return Promise.reject("Nothing");
+
+                var now = new Date(Date.now());
+                newVersion = {
+                    __v : genHash(now.toString()),
+                    modifiedDate : now
                 }
-                return doc.update(toupdate);
+                doc.__v = newVersion.__v;
+                doc.modifiedDate = now;
+                return doc.update(doc);
             })
             .then(function () {
-                return toupdate;
-            })
-            .catch(function (err) {
-                return err;
+                return newVersion;
             })
     }
 }
