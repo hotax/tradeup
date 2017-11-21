@@ -12,7 +12,7 @@ const mongoose = require('mongoose'),
 const __listDraftFor = function () {
     return dbModel.find()
         .select('orderNo createDate')
-        .sort('-createDate')
+        .sort('-modifiedDate')
         .exec()
         .then(function (data) {
             var dataAfterHandled = [];
@@ -28,7 +28,7 @@ const __fieldsForQualityReview = "orderNo productLine items.no " +
     "items.product items.spec items.qty items.due " +
     "items.qualityReview modifiedDate __v";
 const __findDraftForQualityReview = function (id) {
-    return dbModel.findById(id, __fieldsForQualityReview)
+    return dbModel.findById(id, __fieldsForQualityReview, "-modifiedDate")
         .then(function (model) {
             var result = model.toJSON();
             return result;
