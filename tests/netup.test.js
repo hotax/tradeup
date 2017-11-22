@@ -421,19 +421,26 @@ describe('tradup', function () {
                         describe('列出所有订单草稿', function () {
                             var foo, fooid, fooCreateDate;
                             var fee, feeid, feeCreateDate;
+                            var fuu, fuuid, fuuCreateDate;
 
                             beforeEach(function () {
                                 fooCreateDate = new Date(2017, 11, 15).toJSON();
                                 feeCreateDate = new Date(2017, 11, 16).toJSON();
+                                fuuCreateDate = new Date(2017, 11, 17).toJSON();
                                 foo = {orderNo: "foo", createDate: fooCreateDate};
-                                fee = {orderNo: "fee", createDate: feeCreateDate};
+                                fee = {orderNo: "fee", review: {quality: false}, createDate: feeCreateDate};
+                                fuu = {orderNo: "fuu", review: {quality: true}, createDate: fuuCreateDate};
                                 return new orderModel(foo).save()
                                     .then(function (model) {
                                         fooid = model.id;
                                         return new orderModel(fee).save()
-                                            .then(function (model) {
-                                                feeid = model.id;
-                                            })
+                                    })
+                                    .then(function (model) {
+                                        feeid = model.id;
+                                        return new orderModel(fuu).save()
+                                    })
+                                    .then(function (model) {
+                                        fuuid = model.id;
                                     })
                             });
 
@@ -441,8 +448,11 @@ describe('tradup', function () {
                                 return salesOrders.listDrafts()
                                     .then(function (list) {
                                         delete list.items[0].id;
+                                        list.items[0].review = fuu.review;
                                         delete list.items[1].id;
-                                        expect(list).eql({"items": [fee, foo]});
+                                        list.items[1].review = fee.review;
+                                        delete list.items[2].id;
+                                        expect(list).eql({"items": [fuu, fee, foo]});
                                     });
                             });
                         });
