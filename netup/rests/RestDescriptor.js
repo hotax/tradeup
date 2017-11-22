@@ -35,6 +35,8 @@ const __readHandler = function (context, restDesc, req, res) {
             return res.status(200).json(representation);
         })
         .catch(function (err) {
+            if(err.toLowerCase() === REASON_NOT_FOUND)
+                return res.status(404).end();
             console.error(err);
             return res.status(500).send(err);
         })

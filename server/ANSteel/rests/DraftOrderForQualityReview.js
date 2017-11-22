@@ -19,7 +19,22 @@ module.exports = {
                 condition: salesOrders.checkVersion,
                 handle: salesOrders.draftQualityReview
             }
+        },
+        {
+            type: 'delete',
+            conditional: true,
+            response: {
+                conflict: {
+                    code: 409,
+                    err: "该订单当前不在质量评审中，无法完成质量评审!"
+                }
+            },
+            handler: {
+                condition: salesOrders.checkVersion,
+                handle: salesOrders.fulfillQualityReview
+            }
         }
+
     ]
 }
 

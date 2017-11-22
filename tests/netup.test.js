@@ -447,19 +447,51 @@ describe('tradup', function () {
                             });
                         });
 
+                        describe('列出所有送交质量评审的订单草稿', function () {
+                            var foo, fooid, fooCreateDate;
+                            var fee, fuu, feeid, feeCreateDate;
+
+                            beforeEach(function () {
+                                fooCreateDate = new Date(2017, 11, 15).toJSON();
+                                feeCreateDate = new Date(2017, 11, 16).toJSON();
+                                foo = {orderNo: "foo", createDate: fooCreateDate};
+                                fee = {orderNo: "fee", review: {quality: false}, createDate: feeCreateDate};
+                                fuu = {orderNo: "fuu", review: {quality: true}, createDate: feeCreateDate};
+                                return new orderModel(foo).save()
+                                    .then(function (model) {
+                                        fooid = model.id;
+                                        return new orderModel(fee).save()
+                                            .then(function (model) {
+                                                feeid = model.id;
+                                                return new orderModel(fuu).save()
+                                            })
+                                    })
+                            });
+
+                            it('全部列出', function () {
+                                return salesOrders.listDraftsForQualityReview()
+                                    .then(function (list) {
+                                        delete list.items[0].id;
+                                        delete list.items[1].id;
+                                        delete fee.review;
+                                        expect(list).eql({"items": [fee, foo]});
+                                    });
+                            });
+                        });
+
                         describe('按标识读取用于质量评审的订单草稿', function () {
                             var orderInDb, id;
 
                             beforeEach(function () {
+                            });
+
+                            it('正确读取', function () {
                                 return new orderModel(fooSampleDraftOrder).save()
                                     .then(function (model) {
                                         orderInDb = model;
                                         id = orderInDb.id;
+                                        return salesOrders.findDraftForQualityReview(id);
                                     })
-                            });
-
-                            it('正确读取', function () {
-                                return salesOrders.findDraftForQualityReview(id)
                                     .then(function (data) {
                                         expect(data.id).undefined;
                                         expect(data.modifiedDate).eql(orderInDb.modifiedDate.toJSON());
@@ -500,36 +532,21 @@ describe('tradup', function () {
                                             }
                                         ]);
                                     })
-                            })
-                        });
+                            });
 
-                        describe('列出所有送交质量评审的订单草稿', function () {
-                            var foo, fooid, fooCreateDate;
-                            var fee, feeid, feeCreateDate;
-
-                            beforeEach(function () {
-                                fooCreateDate = new Date(2017, 11, 15).toJSON();
-                                feeCreateDate = new Date(2017, 11, 16).toJSON();
-                                foo = {orderNo: "foo", createDate: fooCreateDate};
-                                fee = {orderNo: "fee", createDate: feeCreateDate};
-                                return new orderModel(foo).save()
+                            it('排除已经完成质量评审的订单', function () {
+                                fooSampleDraftOrder.review = {quality: true};
+                                return new orderModel(fooSampleDraftOrder).save()
                                     .then(function (model) {
-                                        fooid = model.id;
-                                        return new orderModel(fee).save()
-                                            .then(function (model) {
-                                                feeid = model.id;
-                                            })
+                                        return salesOrders.findDraftForQualityReview(model.id);
                                     })
-                            });
-
-                            it('全部列出', function () {
-                                return salesOrders.listDraftsForQualityReview()
-                                    .then(function (list) {
-                                        delete list.items[0].id;
-                                        delete list.items[1].id;
-                                        expect(list).eql({"items": [fee, foo]});
-                                    });
-                            });
+                                    .then(function (data) {
+                                        return Promise.reject();
+                                    })
+                                    .catch(function (err) {
+                                        expect(err).eql("Not-Found");
+                                    })
+                            })
                         });
 
                         describe("质量评审", function () {
@@ -648,6 +665,40 @@ describe('tradup', function () {
                                                 .eql(qualityReview);
                                         })
                                 });
+                            });
+                        });
+
+                        describe("完成评审", function () {
+                            var orderInDb;
+
+                            beforeEach(function () {
+                                return new orderModel(fooSampleDraftOrder).save()
+                                    .then(function (model) {
+                                        orderInDb = model;
+                                    })
+                            });
+
+                            it("文档状态不一致", function () {
+                                return salesOrders.fulfillQualityReview(orderInDb.id, -1)
+                                    .then(function () {
+                                        return Promise.reject();
+                                    })
+                                    .catch(function (reason) {
+                                        expect(reason).eql("Concurrent-Conflict");
+                                    })
+                            });
+
+                            it("完成质量评审", function () {
+                                return salesOrders.fulfillQualityReview(orderInDb.id, orderInDb.__v)
+                                    .then(function (data) {
+                                        expect(data).undefined;
+                                        return orderModel.findById(orderInDb.id, "review modifiedDate __v")
+                                    })
+                                    .then(function (data) {
+                                        expect(data.review.quality).true;
+                                        expect(data.modifiedDate).not.eql(orderInDb.modifiedDate);
+                                        expect(data.__v).not.eql(orderInDb.__v);
+                                    })
                             });
                         })
                     });
@@ -1275,6 +1326,13 @@ describe('tradup', function () {
                             .expect('ETag', version)
                             .expect('Last-Modified', modifiedDate)
                             .expect(200, representation, done)
+                    });
+
+                    it('未找到资源', function (done) {
+                        handlerStub.returns(Promise.reject("Not-Found"));
+                        restDescriptor.attach(app, currentResource, url, desc);
+                        request.get(url)
+                            .expect(404, done);
                     });
 
                     it('未知错误返回500内部错', function (done) {

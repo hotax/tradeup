@@ -9,8 +9,8 @@ const mongoose = require('mongoose'),
     genHash = require('../../../../netup/utils/GenHash'),
     saveObjToDb = require('../../../../netup/db/mongoDb/SaveObjectToDb');
 
-const __listDraftFor = function () {
-    return dbModel.find()
+const __listDraftFor = function (filter) {
+    return dbModel.find(filter)
         .select('orderNo createDate')
         .sort('-modifiedDate')
         .exec()
@@ -24,15 +24,15 @@ const __listDraftFor = function () {
             return {items: dataAfterHandled};
         });
 };
-const __fieldsForQualityReview = "orderNo productLine items.no " +
+const __fieldsForQualityReview = "orderNo productLine review items.no " +
     "items.product items.spec items.qty items.due " +
     "items.qualityReview modifiedDate __v";
-const __findDraftForQualityReview = function (id) {
-    return dbModel.findById(id, __fieldsForQualityReview, "-modifiedDate")
-        .then(function (model) {
-            var result = model.toJSON();
-            return result;
-        })
+const __createNewVersion = function () {
+    var now = new Date(Date.now());
+    return {
+        __v: genHash(now.toString()),
+        modifiedDate: now
+    };
 };
 
 module.exports = {
@@ -49,7 +49,6 @@ module.exports = {
         return dbModel.findById(id)
             .then(function (model) {
                 var result = model.toJSON();
-                delete result._id;
                 return result;
             })
     },
@@ -57,10 +56,21 @@ module.exports = {
         return __listDraftFor();
     },
     findDraftForQualityReview: function (id) {
-        return __findDraftForQualityReview(id);
+        return dbModel.findById(id, __fieldsForQualityReview, "-modifiedDate")
+            .then(function (model) {
+                if (model.review && model.review.quality) return Promise.reject("Not-Found");
+                var result = model.toJSON();
+                return result;
+            })
     },
     listDraftsForQualityReview: function () {
-        return __listDraftFor();
+        return __listDraftFor({
+            $or: [
+                {"review": {$exists: false}},
+                {"review.quality": {$exists: false}},
+                {"review.quality": false}
+            ]
+        });
     },
     draftQualityReview: function (id, body) {
         var doc, current;
@@ -90,15 +100,30 @@ module.exports = {
 
                 var now = new Date(Date.now());
                 newVersion = {
-                    __v : genHash(now.toString()),
-                    modifiedDate : now
-                }
+                    __v: genHash(now.toString()),
+                    modifiedDate: now
+                };
                 doc.__v = newVersion.__v;
                 doc.modifiedDate = now;
                 return doc.update(doc);
             })
             .then(function () {
                 return newVersion;
+            })
+    },
+    fulfillQualityReview: function (id, version) {
+        var now = new Date(Date.now());
+        var newVersion = __createNewVersion();
+        newVersion["review.quality"] = true;
+        var toupdate = {
+            "$set": newVersion
+        };
+
+        return dbModel.update({_id: id, __v: version}, toupdate, {strict: true})
+            .then(function (data) {
+                if (!data.ok) return Promise.reject();
+                if (!data.nModified) return Promise.reject("Concurrent-Conflict");
+                return;
             })
     }
 }

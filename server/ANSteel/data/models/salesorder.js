@@ -28,7 +28,7 @@ const PriceSchema = new Schema({
     "fee": Number
 }, transformOption);
 
-const ReviewSchema = new Schema({
+const ItemReviewSchema = new Schema({
     "opinion": String,
     "date": Date,
     "pass": Boolean
@@ -42,12 +42,17 @@ const OrderItemSchema = new Schema({
     "transportation": TransportationSchema,
     "due": DueSchema,
     "price": PriceSchema,
-    "qualityReview": ReviewSchema
+    "qualityReview": ItemReviewSchema
 }, transformOption);
 
 const SettlementSchema = new Schema({
     "account": String,
     "taxType": String
+}, transformOption);
+
+const ReviewSchema = new Schema({
+    "quality": Boolean,
+    "transportation": Boolean
 }, transformOption);
 
 const SalesOrderSchema = new Schema({
@@ -56,10 +61,15 @@ const SalesOrderSchema = new Schema({
     "customer": String,
     "settlement": SettlementSchema,
     "items": [OrderItemSchema],
+    "review": ReviewSchema,
     "sales": String,
     "createDate": {type: Date, default: Date.now, required: true},
     "modifiedDate": {type: Date, default: Date.now, required: true}
 },  transformOption);
+
+SalesOrderSchema.virtual('qualityReview').get(function () {
+    return this.review && this.review.quality;
+});
 
 module.exports = mongoose.model('SalesOrder', SalesOrderSchema);
 
