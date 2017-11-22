@@ -3,7 +3,6 @@
  */
 const transform = {
     transform: function (doc, ret) {
-        //if(doc.modifiedDate) ret.modifiedDate = doc.modifiedDate.toJSON();
         delete ret._id;
         for (var prop in doc) {
             if (doc[prop] instanceof Date) {

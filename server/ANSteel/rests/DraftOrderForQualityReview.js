@@ -18,9 +18,6 @@ module.exports = {
             handler: {
                 condition: salesOrders.checkVersion,
                 handle: salesOrders.draftQualityReview
-                /*handle:function (id, body) {
-                 return salesOrders.draftQualityReview(id, body)
-                 }*/
             }
         }
     ]

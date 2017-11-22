@@ -59,7 +59,7 @@ const SalesOrderSchema = new Schema({
     "sales": String,
     "createDate": {type: Date, default: Date.now, required: true},
     "modifiedDate": {type: Date, default: Date.now, required: true}
-}, transformOption);
+},  transformOption);
 
 module.exports = mongoose.model('SalesOrder', SalesOrderSchema);
 
