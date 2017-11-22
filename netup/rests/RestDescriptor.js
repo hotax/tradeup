@@ -2,6 +2,7 @@
  * Created by clx on 2017/10/13.
  */
 const MEDIA_TYPE = 'application/vnd.hotex.com+json',
+    REASON_FORBIDDEN = "forbidden",
     REASON_IF_MATCH = 'if-match',
     REASON_NOTHING = 'nothing',
     REASON_CONCURRENT_CONFLICT = 'concurrent-conflict',
@@ -54,7 +55,8 @@ const handlerMap = {
         return router.put(urlPattern, function (req, res) {
             var id = req.params["id"];
             var etag = req.get("If-Match");
-            var aPromis = etag ? restDesc.handler.condition(id, etag) : Promise.resolve(true);
+            var aPromis = etag ? restDesc.handler.condition(id, etag)
+                : !restDesc.conditional ? Promise.resolve(true) : Promise.reject("Forbidden");
             return aPromis
                 .then(function (data) {
                     if (!data) return Promise.reject(REASON_IF_MATCH);
@@ -70,6 +72,8 @@ const handlerMap = {
                     return res.status(204).end();
                 })
                 .catch(function (reason) {
+                    if (reason.toLowerCase() === REASON_FORBIDDEN)
+                        return res.status(403).send("client must send a conditional request").end();
                     if (reason.toLowerCase() === REASON_IF_MATCH)
                         return res.status(412).end();
                     if(reason.toLowerCase() === REASON_NOT_FOUND)
@@ -87,15 +91,34 @@ const handlerMap = {
                 })
         });
     },
-    delete: function (router, context, urlPattern, restDesc) {
+    "delete": function (router, context, urlPattern, restDesc) {
         return router.delete(urlPattern, function (req, res) {
-            return restDesc.handler(req, res)
+            var id = req.params["id"];
+            var etag = req.get("If-Match");
+            var aPromis = etag ? restDesc.handler.condition(id, etag)
+                : !restDesc.conditional ? Promise.resolve(true) : Promise.reject("Forbidden");
+            return aPromis
+                .then(function (data) {
+                    if (!data) return Promise.reject(REASON_IF_MATCH);
+                    return restDesc.handler.handle(id, etag);
+                })
                 .then(function () {
-                    res.status(204).end();
+                    return res.status(204).end();
                 })
                 .catch(function (reason) {
-                    if (restDesc.response && restDesc.response[reason]) {
-                        return res.status(restDesc.response[reason]).end();
+                    if (reason.toLowerCase() === REASON_FORBIDDEN)
+                        return res.status(403).send("client must send a conditional request").end();
+                    if (reason.toLowerCase() === REASON_IF_MATCH)
+                        return res.status(412).end();
+                    if(reason.toLowerCase() === REASON_NOT_FOUND)
+                        return res.status(404).end();
+                    if(reason.toLowerCase() === REASON_CONCURRENT_CONFLICT)
+                        return res.status(304).end();
+                    if (restDesc.response && restDesc.response[reason]){
+                        var msg = restDesc.response[reason].err ? restDesc.response[reason].err : reason;
+                        return res.status(restDesc.response[reason].code)
+                            .send(msg)
+                            .end();
                     }
                     console.error(reason);
                     return res.status(500).send(reason);

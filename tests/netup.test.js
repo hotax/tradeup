@@ -1307,6 +1307,12 @@ describe('tradup', function () {
                         restDescriptor.attach(app, currentResource, url, desc);
                     });
 
+                    it('请求中未包含条件', function (done) {
+                        desc.conditional = true;
+                        request.put("/url/" + id)
+                            .expect(403, "client must send a conditional request", done);
+                    });
+
                     it('不满足请求条件', function (done) {
                         handler.condition.withArgs(id, version).returns(Promise.resolve(false));
                         request.put("/url/" + id)
@@ -1346,7 +1352,7 @@ describe('tradup', function () {
                             .expect(404, done);
                     });
 
-                    it("文档状态不一致无新的评审内容需要更新", function (done) {
+                    it("文档状态不一致", function (done) {
                         var reason = "Concurrent-Conflict";
                         handler.handle.withArgs(id, body).returns(Promise.reject(reason));
                         request.put("/url/" + id)
@@ -1388,8 +1394,6 @@ describe('tradup', function () {
                             .expect(204, done);
                     });
 
-
-
                     it('未能识别的错误返回500内部错', function (done) {
                         err = "foo";
                         handler.handle.returns(Promise.reject(err));
@@ -1399,36 +1403,92 @@ describe('tradup', function () {
                 });
 
                 describe('删除服务', function () {
-                    var handler;
+                    var handler, id, version;
                     beforeEach(function () {
-                        handler = sinon.stub();
+                        handler = sinon.stub({
+                            condition: function (id, version) {
+                            },
+                            handle: function (id, version) {
+                            }
+                        });
                         desc = {
                             type: 'delete',
                             handler: handler
                         };
+                        url = "/url/:id";
+                        id = "foo";
+                        version = "12345df";
                         restDescriptor.attach(app, currentResource, url, desc);
                     });
 
+                    it('请求中未包含条件', function (done) {
+                        desc.conditional = true;
+                        request.delete("/url/" + id)
+                            .expect(403, "client must send a conditional request", done);
+                    });
+
+                    it('不满足请求条件', function (done) {
+                        handler.condition.withArgs(id, version).returns(Promise.resolve(false));
+                        request.delete("/url/" + id)
+                            .set("If-Match", version)
+                            .expect(412, done);
+                    });
+
+                    it('满足请求条件, 但handle处理失败', function (done) {
+                        var reason = "conflict";
+                        err = "details of conflicts";
+                        desc.response = {
+                            conflict: {
+                                code: 409,
+                                err: err
+                            }
+                        };
+                        handler.condition.withArgs(id, version).returns(Promise.resolve(true));
+                        handler.handle.withArgs(id, version).returns(Promise.reject(reason));
+                        request.delete("/url/" + id)
+                            .set("If-Match", version)
+                            .expect(409, err, done);
+                    });
+
+                    it('满足请求条件, 并正确响应', function (done) {
+                        handler.condition.withArgs(id, version).returns(Promise.resolve(true));
+                        handler.handle.returns(Promise.resolve());
+                        request.delete("/url/" + id)
+                            .set("If-Match", version)
+                            .expect(204, done);
+                    });
+
+                    it('未找到文档', function (done) {
+                        var reason = "Not-Found";
+                        handler.handle.withArgs(id).returns(Promise.reject(reason));
+                        request.delete("/url/" + id)
+                            .expect(404, done);
+                    });
+
                     it('正确响应', function (done) {
-                        handler.returns(Promise.resolve());
-                        request.delete(url)
+                        handler.handle.withArgs(id).returns(Promise.resolve());
+                        request.delete("/url/" + id)
                             .expect(204, done);
                     });
 
                     it('响应删除失败', function (done) {
                         var reason = "conflict";
+                        err = "details of conflicts";
                         desc.response = {
-                            conflict: 409
+                            conflict: {
+                                code: 409
+                            }
                         };
-                        handler.returns(Promise.reject(reason));
-                        request.delete(url)
-                            .expect(409, done);
+                        //TODO:对于在服务定义中定义的出错处理应重构
+                        handler.handle.withArgs(id).returns(Promise.reject(reason));
+                        request.delete("/url/" + id)
+                            .expect(409, reason, done);
                     });
 
                     it('未能识别的错误返回500内部错', function (done) {
                         err = "foo";
-                        handler.returns(Promise.reject(err));
-                        request.delete(url)
+                        handler.handle.withArgs(id).returns(Promise.reject(err));
+                        request.delete("/url/" + id)
                             .expect(500, err, done);
                     });
                 });
