@@ -1,6 +1,10 @@
 /**
  * Created by clx on 2017/10/29.
  */
+const __checkIfModifyIsPermited = function (context) {
+    return !context.review;
+};
+
 module.exports = {
     Login: {
         Sales: "Sales",
@@ -19,8 +23,14 @@ module.exports = {
     },
     DraftOrder: {
         self: "DraftOrder",
-        edit: "DraftOrder",
-        cancel: "DraftOrder",
+        edit: {
+            id: "DraftOrder",
+            condition: __checkIfModifyIsPermited
+        },
+        cancel: {
+            id: "DraftOrder",
+            condition: __checkIfModifyIsPermited
+        },
         "review draft orders": "DraftOrders"
     },
     QualityReviewer: {
