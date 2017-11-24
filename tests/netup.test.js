@@ -1660,54 +1660,48 @@ describe('tradup', function () {
                         resource = resourceRegistry.attach(router, resourceId, desc);
                         expect(resource.getUrl(fromResourceId, context, req)).eql(expectedUrl);
                     });
-
-                    it('构建从当前资源迁移到指定资源的URL', function () {
-                        var fooDesc = {
-                            url: '/url/foo',
-                            rests: [restDesc]
-                        };
-                        var feeDesc = {
-                            url: '/url/fee',
-                            rests: [restDesc]
-                        };
-
-                        urlResolveStub.withArgs(req, '/url/fee').returns(expectedUrl);
-                        resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
-
-                        var fooResource = resourceRegistry.attach(router, 'foo', fooDesc);
-                        resourceRegistry.attach(router, 'fee', feeDesc);
-                        expect(fooResource.getTransitionUrl('fee', context, req)).eql(expectedUrl);
-                    });
                 });
 
-                it('获得当前资源状态下的迁移链接列表', function (done) {
+                it('构建从一个资源迁移到另一个资源的URL', function () {
+                    var fooDesc = {
+                        url: '/url/foo',
+                        rests: [restDesc]
+                    };
+                    var feeDesc = {
+                        url: '/url/fee',
+                        rests: [restDesc]
+                    };
+
+                    var req = {
+                        params: {},
+                        query: {}
+                    }
+
+                    var expectedUrl = "/expected/url";
+                    var urlResolveStub = sinon.stub();
+                    urlResolveStub.withArgs(req, '/url/fee').returns(expectedUrl);
+                    stubs['../express/Url'] = {resolve: urlResolveStub};
+                    resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
+
+                    var fooResource = resourceRegistry.attach(router, 'foo', fooDesc);
+                    resourceRegistry.attach(router, 'fee', fooDesc);
+                    resourceRegistry.attach(router, 'fee', feeDesc);
+                    resourceRegistry.getTransitionUrl("foo", "fee", context, req);
+                });
+
+                it('获得当前资源状态下的迁移链接列表', function () {
                     var req = {reg: 'any request'};
                     var context = {context: 'any context'};
-                    var transitions = {
-                        rel1: 'fee',
-                        rel2: 'fuu'
-                    }
-                    var findTransitionsStub = createPromiseStub([resourceId, context, req], [transitions]);
-                    //stubs['./StateTransitionsGraph'] = {findTransitions: findTransitionsStub};
+                    var links = [{rel: "foo", href: "/foo"}, {rel: "fee", href: "/fee"}];
+                    var getLinksStub = createPromiseStub([resourceId, context, req], [links]);
 
-                    var feeUrl = '/url/fee';
-                    var fuuUrl = '/url/fuu';
-                    var getTransitionUrlStub = sinon.stub();
-                    getTransitionUrlStub.withArgs('fee', context, req).returns(feeUrl);
-                    getTransitionUrlStub.withArgs('fuu', context, req).returns(fuuUrl);
-
-                    resourceRegistry = proxyquire('../netup/rests/ResourceRegistry', stubs);
-                    resourceRegistry.setTransitionsFinder({findTransitions: findTransitionsStub});
+                    resourceRegistry = require('../netup/rests/ResourceRegistry');
+                    resourceRegistry.setTransitionGraph({getLinks: getLinksStub});
                     var resource = resourceRegistry.attach(router, resourceId, desc);
-                    resource.getTransitionUrl = getTransitionUrlStub;
 
                     return resource.getLinks(context, req)
                         .then(function (data) {
-                            expect(data).eql([
-                                {rel: 'rel1', href: feeUrl},
-                                {rel: 'rel2', href: fuuUrl}
-                            ]);
-                            done();
+                            expect(data).eql(links);
                         })
                 });
 
@@ -1734,6 +1728,80 @@ describe('tradup', function () {
                     expect(attachSpy).calledWith(router, resource, url, restDesc);
                 });
             });
+
+            describe("基本的资源状态迁移图解析器", function () {
+                var context, req, transitionGraph;
+                var fooUrl, feeUrl;
+                var getTransitionUrlStub, transitionGraphFactory, transitionGraphParser;
+                var transCondStub;
+
+                beforeEach(function () {
+                    context = {context: "any context"};
+                    req = {req: "any request object"};
+                    transitionGraph = {
+                        resource1: {
+                            rel1: "foo",
+                            rel2: "fee"
+                        },
+                        resource2: {
+                            rel3: "fuu"
+                        }
+                    };
+
+                    fooUrl = '/url/foo';
+                    feeUrl = '/url/fee';
+                    getTransitionUrlStub = sinon.stub();
+                    getTransitionUrlStub.withArgs("resource1", 'foo', context, req).returns(fooUrl);
+                    getTransitionUrlStub.withArgs("resource1", 'fee', context, req).returns(feeUrl);
+
+                    transitionGraphFactory = require("../netup/rests/BaseTransitionGraph");
+                    transitionGraphParser = transitionGraphFactory(transitionGraph, {
+                        getTransitionUrl: getTransitionUrlStub
+                    });
+                    transCondStub = sinon.stub();
+                });
+
+                it("最简单的迁移定义", function () {
+                    return transitionGraphParser.getLinks("resource1", context, req)
+                        .then(function (data) {
+                            expect(data).eql([
+                                {rel: "rel1", href: fooUrl},
+                                {rel: "rel2", href: feeUrl},
+                            ])
+                        })
+                });
+
+                it("未满足迁移条件", function () {
+                    transCondStub.withArgs(context, req).returns(false);
+                    transitionGraph.resource1.rel2 = {
+                        id: "fee",
+                        condition: transCondStub
+                    };
+
+                    return transitionGraphParser.getLinks("resource1", context, req)
+                        .then(function (data) {
+                            expect(data).eql([
+                                {rel: "rel1", href: fooUrl}
+                            ])
+                        })
+                });
+
+                it("满足迁移条件", function () {
+                    transCondStub.withArgs(context, req).returns(true);
+                    transitionGraph.resource1.rel2 = {
+                        id: "fee",
+                        condition: transCondStub
+                    };
+
+                    return transitionGraphParser.getLinks("resource1", context, req)
+                        .then(function (data) {
+                            expect(data).eql([
+                                {rel: "rel1", href: fooUrl},
+                                {rel: "rel2", href: feeUrl}
+                            ])
+                        })
+                });
+            })
 
         });
 

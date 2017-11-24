@@ -7,13 +7,17 @@ const path = require('path'),
     resourceDescriptors = require('./netup/rests/DirectoryResourceDescriptorsLoader').loadFrom(restDir),
     resourceRegistry = require('./netup/rests/ResourceRegistry'),
     //transitionsGraph = require('./netup/rests/StateTransitionsGraph'),
-    transitionsGraph = require('./server/ANSteel/StateTransitionsGraph'),
+    //transitionsGraph = require('./server/ANSteel/StateTransitionsGraph'),
+    graph = require('./server/ANSteel/StateTransitionsGraph'),
+    transitionsGraph = require('./netup/rests/BaseTransitionGraph')(graph, resourceRegistry),
     connectDb = require('./netup/db/mongoDb/ConnectMongoDb'),
     appBuilder = require('./netup/express/AppBuilder');
 
 var log4js = require('log4js');
 log4js.configure("log4js.conf", {reloadSecs: 300});
 var logger = log4js.getLogger();
+
+resourceRegistry.setTransitionGraph(transitionsGraph);
 
 module.exports = function () {
     const defaultPort = 33579;
@@ -39,7 +43,7 @@ module.exports = function () {
     appBuilder
         .begin(__dirname)
         .setViewEngine(viewEngineFactory)
-        .setResources(resourceRegistry, resourceDescriptors, transitionsGraph)
+        .setResources(resourceRegistry, resourceDescriptors)
         .setWebRoot('/website', './client/public')
         .end();
 

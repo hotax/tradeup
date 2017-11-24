@@ -10,8 +10,11 @@ var __resources = {};
 var __transGraph;
 
 module.exports = {
-    setTransitionsFinder: function (finder) {
-        __transGraph = finder;
+    setTransitionGraph: function (graph) {
+        __transGraph = graph;
+    },
+    getTransitionUrl: function (resourceId, destResourceId, context, req) {
+        return __resources[destResourceId].getUrl(resourceId, context, req);
     },
     attach: function (router, resourceId, resourceDesc) {
         if (!resourceDesc.url) throw 'a url must be defined!';
@@ -62,17 +65,8 @@ module.exports = {
                 return __resources[destResourceId].getUrl(resourceId, context, req);
             },
             getLinks: function (context, req) {
-                var me = this;
-                return __transGraph.findTransitions(resourceId, context, req)
-                    .then(function (trans) {
-                        var links = [];
-                        for (var key in trans) {
-                            var href = me.getTransitionUrl(trans[key], context, req);
-                            links.push({rel: key, href: href});
-                        }
-                        return links;
-                    })
-            },
+                return __transGraph.getLinks(resourceId, context, req);
+            }
         };
 
         resourceDesc.rests.forEach(function (service) {
