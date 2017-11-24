@@ -132,6 +132,7 @@ const __updateHandler = function (context, restDesc, req, res) {
             return res.status(204).end();
         })
         .catch(function (reason) {
+            //TODO:需要处理reason不是String类型的情况，如mongoose error：当ID多一位数字，如5a110479d1036d4dd0dc4aed1就是一个非法ID
             if (reason.toLowerCase() === REASON_FORBIDDEN)
                 return res.status(403).send("client must send a conditional request").end();
             if (reason.toLowerCase() === REASON_IF_MATCH)

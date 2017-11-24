@@ -103,6 +103,7 @@ module.exports = {
                     __v: genHash(now.toString()),
                     modifiedDate: now
                 };
+                if (!doc.review) doc.review = {quality: false};
                 doc.__v = newVersion.__v;
                 doc.modifiedDate = now;
                 return doc.update(doc);
