@@ -1936,14 +1936,9 @@ describe('tradup', function () {
 
                 it('开发人员可以加载Rest服务', function () {
                     var attachSpy = sinon.spy();
-                    var setTransitionsFinderSpy = sinon.spy();
                     var resourceRegistry = {
-                        setTransitionsFinder: setTransitionsFinderSpy,
                         attach: attachSpy
                     };
-
-                    var setResourcesNameListSpy = sinon.spy();
-                    var resourceTransitionsGraph = {setResourcesNameList: setResourcesNameListSpy};
 
                     var fooResourceDesc = {foo: 'foo resource desc'};
                     var feeResourceDesc = {fee: 'fee resource desc'};
@@ -1953,11 +1948,9 @@ describe('tradup', function () {
                     };
 
                     var app = appBuilder
-                        .setResources(resourceRegistry, resources, resourceTransitionsGraph)
+                        .setResources(resourceRegistry, resources)
                         .end();
 
-                    expect(setResourcesNameListSpy).calledWith(resourceRegistry);
-                    expect(setTransitionsFinderSpy).calledWith(resourceTransitionsGraph);
                     expect(attachSpy).calledWith(app, 'foo', fooResourceDesc);
                     expect(attachSpy).calledWith(app, 'fee', feeResourceDesc);
                 });

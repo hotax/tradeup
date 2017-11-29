@@ -12,6 +12,14 @@ module.exports = {
                 var id = req.params["id"];
                 return salesOrders.findById(id);
             }
+        },
+        {
+            type: 'delete',
+            conditional: true,
+            handler: {
+                condition: salesOrders.checkVersion,
+                handle: salesOrders.cancelDraft
+            }
         }
     ]
 }

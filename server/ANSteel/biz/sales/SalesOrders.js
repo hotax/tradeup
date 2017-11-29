@@ -52,6 +52,9 @@ module.exports = {
                 return result;
             })
     },
+    cancelDraft: function (id, version) {
+        return dbModel.remove({_id: id, __v: version});
+    },
     listDrafts: function () {
         return __listDraftFor();
     },

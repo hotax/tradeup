@@ -13,6 +13,7 @@
     "test": "mocha --timeout 15000 -r tests/testhelper.js -R spec tests/**/*.test.js"
   },
   "dependencies": {
+    "amqplib": "^0.5.2",
     "async": "^2.1.2",
     "bcrypt-nodejs": "0.0.3",
     "bluebird": "^3.4.6",
