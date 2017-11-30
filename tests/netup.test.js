@@ -369,6 +369,8 @@ describe('tradup', function () {
                 });
 
                 describe('业务', function () {
+                    describe('基于消息', function () {
+                    });
                     describe('销售订单', function () {
                         var salesOrders, orderModel, unknownId;
 
@@ -1993,6 +1995,65 @@ describe('tradup', function () {
                         process.env.PORT = port;
                         runAndCheckServer(null, 'http://localhost:' + port + '/staticResource.json', done);
                     });
+                });
+            });
+        });
+
+        describe("消息", function () {
+            describe("演示", function () {
+                var amqp, connstr, connection, channel, queue;
+                before(function () {
+                    connstr = "amqp://qladapfm:CjtgA21O-1Ux-L108UCR70TcJ4GDpRVh@spider.rmq.cloudamqp.com/qladapfm";
+                    amqp = require('amqplib');
+
+                    return amqp.connect(connstr)
+                        .then(function (conn) {
+                            connection = conn;
+                            conn.on("close", function () {
+                                console.error("[AMQP] connection is closed");
+                            });
+                            return conn.createChannel();
+                        })
+                        .then(function (ch) {
+                            channel = ch;
+                            return Promise.all([
+                                ch.assertQueue('qualityReview'),
+                                ch.assertExchange('orderDrafted', 'fanout'),
+                                ch.bindQueue('qualityReview', 'orderDrafted')
+                            ]);
+                        })
+                        .catch(function (err) {
+                            console.log(err);
+                        });
+                });
+
+                after(function () {
+                    return connection.close()
+                        .then(function () {
+                        })
+                });
+
+                afterEach(function () {
+                    return channel.purgeQueue('qualityReview')
+                        .then(function (count) {
+                            console.info("messages count: " + count.messageCount);
+                        })
+                });
+
+                it("Hello world", function () {
+                    return Promise.resolve()
+                        .then(function () {
+                            return channel.consume('qualityReview', function (msg) {
+                                var content = msg.content.toString();
+                                console.log(" [x] Received " + content);
+                                return channel.ack(msg);
+                            });
+                        })
+                        .then(function () {
+                        })
+                        .catch(function (err) {
+                            console.log(err);
+                        });
                 });
             });
         });
