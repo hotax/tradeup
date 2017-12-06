@@ -370,7 +370,29 @@ describe('tradup', function () {
 
                 describe('业务', function () {
                     describe('基于消息', function () {
+                        describe("销售", function () {
+                        });
+
+                        describe("质量", function () {
+                        });
+
+                        describe("财务", function () {
+
+                        });
+
+                        describe("生产线", function () {
+
+                        });
+
+                        describe("成品库", function () {
+
+                        });
+
+                        describe("运输", function () {
+
+                        });
                     });
+
                     describe('销售订单', function () {
                         var salesOrders, orderModel, unknownId;
 
@@ -2000,7 +2022,7 @@ describe('tradup', function () {
         });
 
         describe("消息", function () {
-            describe("演示", function () {
+            xdescribe("演示", function () {
                 var amqp, connstr, connection, channel, queue;
                 before(function () {
                     connstr = "amqp://qladapfm:CjtgA21O-1Ux-L108UCR70TcJ4GDpRVh@spider.rmq.cloudamqp.com/qladapfm";
