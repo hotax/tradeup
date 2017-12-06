@@ -371,7 +371,26 @@ describe('tradup', function () {
                 describe('业务', function () {
                     describe('基于消息', function () {
                         describe("销售", function () {
-                            describe("订单管理", function () {
+                            describe("订单生命周期", function () {
+                                var salesOrderLifecycle, stateResitoryStub;
+                                var orderId, state;
+                                beforeEach(function () {
+                                    orderId = "123456";
+                                    stateResitoryStub = sinon.stub({
+                                        init: function (id, state) {
+                                        }
+                                    });
+                                    salesOrderLifecycle = require('../server/ANSteel/biz/sales/OrderLifeCycle')(stateResitoryStub)
+                                });
+
+                                it("接纳订单草稿", function () {
+                                    state = salesOrderLifecycle.DRAFT;
+                                    stateResitoryStub.init.withArgs(orderId, state).returns(Promise.resolve());
+                                    return salesOrderLifecycle.acceptDraft(orderId)
+                                        .then(function (data) {
+                                            expect(data).eql(salesOrderLifecycle.DRAFT);
+                                        })
+                                })
                             });
 
                             describe("订单草拟", function () {
