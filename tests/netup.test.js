@@ -376,6 +376,68 @@ describe('tradup', function () {
 
                             describe("订单草拟", function () {
                                 describe("草拟订单", function () {
+                                    var orderDrafting, orderRepositoryStub, lifecycleStub;
+                                    var draft, reason;
+                                    beforeEach(function () {
+                                        draft = {draft: "any order draft content"};
+                                        reason = {reason: "any reason"};
+
+                                        orderRepositoryStub = sinon.stub({
+                                            create: function (draft) {
+                                            },
+                                            update: function (id, version, data) {
+                                            },
+                                            cancel: function (id, version) {
+                                            },
+                                            find: function (id) {
+                                            }
+                                        });
+
+                                        lifecycleStub = sinon.stub({
+                                            entry: function (id) {
+                                            }
+                                        });
+
+                                        orderDrafting = require('../server/ANSteel/biz/sales/OrderDrafting')(orderRepositoryStub, lifecycleStub);
+                                    });
+
+                                    it("创建订单失败", function () {
+                                        orderRepositoryStub.create.withArgs(draft).returns(Promise.reject(reason));
+                                        return orderDrafting.draft(draft)
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (data) {
+                                                expect(data).eql(reason);
+                                            })
+                                    });
+
+                                    it("设置订单初始状态失败", function () {
+                                        var orderId = "123344";
+                                        var order = {id: orderId};
+                                        orderRepositoryStub.create.withArgs(draft).returns(Promise.resolve(order));
+                                        lifecycleStub.entry.withArgs(orderId).returns(Promise.reject(reason));
+                                        return orderDrafting.draft(draft)
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (data) {
+                                                expect(data).eql(reason);
+                                            })
+                                    });
+
+                                    it("草拟订单成功", function () {
+                                        var orderId = "123344";
+                                        var order = {id: orderId};
+                                        orderRepositoryStub.create.withArgs(draft).returns(Promise.resolve(order));
+                                        var state = {state: "the state"};
+                                        var expectedOrder = Object.assign({state: state}, order);
+                                        lifecycleStub.entry.withArgs(orderId).returns(Promise.resolve(state));
+                                        return orderDrafting.draft(draft)
+                                            .then(function (data) {
+                                                expect(data).eql(expectedOrder);
+                                            })
+                                    });
                                 });
 
                                 describe("修订订单", function () {
