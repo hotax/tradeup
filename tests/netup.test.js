@@ -371,6 +371,20 @@ describe('tradup', function () {
                 describe('业务', function () {
                     describe('基于消息', function () {
                         describe("销售", function () {
+                            describe("订单管理", function () {
+                            });
+
+                            describe("订单草拟", function () {
+                            });
+
+                            describe("商务评审", function () {
+                            });
+
+                            describe("财务评审", function () {
+                            });
+
+                            describe("订单执行", function () {
+                            });
                         });
 
                         describe("质量", function () {
