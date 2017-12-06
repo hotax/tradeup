@@ -37,7 +37,7 @@ global.insertDocsInSequential = function insertDocsInSequential(model, docs, cal
     }
 
     iterate(0);
-}
+};
 global.insertDocsInParallel = function insertDocsInParallel(model, docs, callback) {
     var result = [];
     var finished = 0, errored = false;
@@ -57,7 +57,7 @@ global.insertDocsInParallel = function insertDocsInParallel(model, docs, callbac
     docs.forEach(function (item) {
         new model(item).save(done);
     });
-}
+};
 global.createPromiseStub = function createPromiseStub(withArgs, resolves, err) {
     var stub = sinon.stub();
     var mid;
@@ -76,4 +76,17 @@ global.createPromiseStub = function createPromiseStub(withArgs, resolves, err) {
         promise.resolves.apply(promise, resolves);
     }
     return stub;
-}
+};
+global.toJSON = function toJSON(obj) {
+    var result = Object.assign({}, obj);
+    for (var prop in result) {
+        if (result[prop] instanceof Date) {
+            result[prop] = result[prop].toJSON();
+        } else {
+            if (!Array.isArray(result[prop]) && result[prop] instanceof Object) {
+                result[prop] = toJSON(result[prop]);
+            }
+        }
+    }
+    return result;
+};

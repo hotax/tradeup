@@ -395,7 +395,40 @@ describe('tradup', function () {
 
                             describe("订单草拟", function () {
                                 describe("订单存储", function () {
-                                    describe("新增", function () {
+                                    var orderRepository;
+                                    var draftData;
+
+                                    beforeEach(function () {
+                                        draftData = {
+                                            "orderNo": "00001",
+                                            "customer": "cust0001",
+                                            "items": [
+                                                {
+                                                    "no": "001",
+                                                    "product": "p0007"
+                                                },
+                                                {
+                                                    "no": "002",
+                                                    "product": "p0008"
+                                                }
+                                            ],
+                                            "sales": "seles0002",
+                                            "createDate": new Date(2017, 12, 6).toJSON()
+                                        };
+                                        orderRepository = require('../server/ANSteel/biz/sales/OrderRepository');
+                                    });
+
+                                    it("新增", function () {
+                                        return orderRepository.insert(draftData)
+                                            .then(function (data) {
+                                                var expected = Object.assign({
+                                                    id: data.id,
+                                                    modifiedDate: data.modifiedDate,
+                                                    __v: data.__v
+                                                }, draftData);
+
+                                                expect(data).eql(expected);
+                                            })
                                     });
 
                                     describe("更新", function () {
