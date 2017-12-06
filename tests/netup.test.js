@@ -375,6 +375,17 @@ describe('tradup', function () {
                             });
 
                             describe("订单草拟", function () {
+                                describe("草拟订单", function () {
+                                });
+
+                                describe("修订订单", function () {
+                                });
+
+                                describe("删除订单", function () {
+                                });
+
+                                describe("查询指定订单", function () {
+                                });
                             });
 
                             describe("商务评审", function () {
