@@ -394,6 +394,20 @@ describe('tradup', function () {
                             });
 
                             describe("订单草拟", function () {
+                                describe("订单存储", function () {
+                                    describe("新增", function () {
+                                    });
+
+                                    describe("更新", function () {
+                                    });
+
+                                    describe("删除", function () {
+                                    });
+
+                                    describe("查询", function () {
+                                    });
+                                });
+
                                 describe("草拟订单", function () {
                                     var orderDrafting, orderRepositoryStub, lifecycleStub;
                                     var draft, reason;
