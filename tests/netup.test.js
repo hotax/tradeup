@@ -378,6 +378,8 @@ describe('tradup', function () {
                                     orderId = "5a29fb9e8fc8ea1de442f6bb";
                                     stateResitoryStub = sinon.stub({
                                         init: function (id, state) {
+                                        },
+                                        listByState: function (state) {
                                         }
                                     });
                                     salesOrderLifecycle = require('../server/ANSteel/biz/sales/OrderLifeCycle')(stateResitoryStub)
@@ -388,7 +390,7 @@ describe('tradup', function () {
                                     stateResitoryStub.init.withArgs(orderId, state).returns(Promise.resolve());
                                     return salesOrderLifecycle.acceptDraft(orderId)
                                         .then(function (data) {
-                                            expect(data).eql(salesOrderLifecycle.DRAFT);
+                                            expect(data).eql(state);
                                         })
                                 });
 
@@ -494,6 +496,36 @@ describe('tradup', function () {
                                             })
                                     });
                                 });
+
+                                describe("查询特定状态下的所有订单", function () {
+                                    function testListOrdersUnderState(service, state) {
+                                        console.info("service: " + service + "   state: " + state);
+                                        var result = [{order: "12345"}, {order: "23456"}];
+                                        stateResitoryStub.listByState.withArgs(state)
+                                            .returns(Promise.resolve(result));
+                                        return salesOrderLifecycle["list" + service]()
+                                            .then(function (data) {
+                                                expect(data).eql(result);
+                                            })
+                                    }
+
+                                    it("查询特定状态下的所有订单", function () {
+                                        var allServicesAndStates = [
+                                            {service: "Drafts", state: salesOrderLifecycle.DRAFT},
+                                            {service: "BizReview", state: salesOrderLifecycle.BIZREVIEW},
+                                            {service: "FinacialReview", state: salesOrderLifecycle.FINACIALREVIEW},
+                                            {service: "Executing", state: salesOrderLifecycle.EXECUTING},
+                                            {service: "Stop", state: salesOrderLifecycle.STOP},
+                                            {service: "Cleared", state: salesOrderLifecycle.CLEARED}
+                                        ];
+                                        Promise.all(allServicesAndStates.map(function (item) {
+                                            return testListOrdersUnderState(item.service, item.state);
+                                        }))
+                                            .then(function (data) {
+                                                expect(data).undefined;
+                                            })
+                                    })
+                                })
                             });
 
                             describe("订单草拟", function () {
