@@ -375,31 +375,32 @@ describe('tradup', function () {
                                 var salesOrderLifecycle, stateResitoryStub;
                                 var orderId, state;
                                 beforeEach(function () {
-                                    orderId = "123456";
+                                    orderId = "5a29fb9e8fc8ea1de442f6bb";
                                     stateResitoryStub = sinon.stub({
                                         init: function (id, state) {
                                         }
                                     });
                                     salesOrderLifecycle = require('../server/ANSteel/biz/sales/OrderLifeCycle')(stateResitoryStub)
+                                    state = salesOrderLifecycle.DRAFT;
                                 });
 
                                 it("接纳订单草稿", function () {
-                                    state = salesOrderLifecycle.DRAFT;
                                     stateResitoryStub.init.withArgs(orderId, state).returns(Promise.resolve());
                                     return salesOrderLifecycle.acceptDraft(orderId)
                                         .then(function (data) {
                                             expect(data).eql(salesOrderLifecycle.DRAFT);
                                         })
-                                })
+                                });
                             });
 
                             describe("订单草拟", function () {
                                 describe("订单存储", function () {
-                                    var orderRepository;
+                                    var dbSchema, orderRepository;
+                                    var fooDraftData, fooOrderId, fooVersion, foo;
                                     var draftData;
 
                                     beforeEach(function () {
-                                        draftData = {
+                                        fooDraftData = {
                                             "orderNo": "00001",
                                             "customer": "cust0001",
                                             "items": [
@@ -415,10 +416,19 @@ describe('tradup', function () {
                                             "sales": "seles0002",
                                             "createDate": new Date(2017, 12, 6).toJSON()
                                         };
-                                        orderRepository = require('../server/ANSteel/biz/sales/OrderRepository');
+                                        dbSchema = require('../server/ANSteel/data/models/salesorder');
+                                        return new dbSchema(fooDraftData).save()
+                                            .then(function (data) {
+                                                fooOrderId = data.id;
+                                                fooVersion = data.__v;
+                                                foo = data.toJSON();
+                                                return orderRepository = require('../server/ANSteel/biz/sales/OrderRepository');
+                                            })
                                     });
 
                                     it("新增", function () {
+                                        draftData = Object.assign({}, fooDraftData);
+                                        draftData.orderNo = "feefeefee";
                                         return orderRepository.insert(draftData)
                                             .then(function (data) {
                                                 var expected = Object.assign({
@@ -432,12 +442,105 @@ describe('tradup', function () {
                                     });
 
                                     describe("更新", function () {
+                                        it('订单不存在', function () {
+                                            return orderRepository.update("5a29fb9e8fc8ea1de442f6bb", {})
+                                                .then(function (data) {
+                                                    expect(data).eql(false);
+                                                })
+                                        });
+
+                                        it('版本不一致', function () {
+                                            return orderRepository.update(fooOrderId, {__v: fooVersion + 1})
+                                                .then(function (data) {
+                                                    expect(data).eql(false);
+                                                })
+                                        });
+
+                                        it('更新成功', function () {
+                                            var no = "ffffff";
+                                            var items = [foo.items[1]];
+                                            var updatedFoo = Object.assign({}, foo);
+                                            updatedFoo.orderNo = no;
+                                            updatedFoo.items = items;
+                                            return orderRepository.update(fooOrderId, updatedFoo)
+                                                .then(function (data) {
+                                                    expect(data).eql(true);
+                                                    return dbSchema.findById(fooOrderId);
+                                                })
+                                                .then(function (data) {
+                                                    data = data.toJSON();
+                                                    expect(data.__v).not.eql(updatedFoo.__v);
+                                                    delete data.__v;
+                                                    delete updatedFoo.__v;
+                                                    expect(data).eql(updatedFoo);
+                                                })
+                                        })
                                     });
 
                                     describe("删除", function () {
+                                        it('订单不存在', function () {
+                                            return orderRepository.delete("5a29fb9e8fc8ea1de442f6bb", fooVersion)
+                                                .then(function (data) {
+                                                    expect(data).eql(false);
+                                                })
+                                        });
+
+                                        it('版本不一致', function () {
+                                            return orderRepository.delete(fooOrderId, fooVersion + 1)
+                                                .then(function (data) {
+                                                    expect(data).eql(false);
+                                                })
+                                        });
+
+                                        it('成功', function () {
+                                            return orderRepository.delete(fooOrderId, fooVersion)
+                                                .then(function (data) {
+                                                    expect(data).eql(true);
+                                                    return dbSchema.findById(fooOrderId);
+                                                })
+                                                .then(function (data) {
+                                                    expect(data).null;
+                                                })
+                                        })
                                     });
 
                                     describe("查询", function () {
+                                        it('订单不存在', function () {
+                                            return orderRepository.find("5a29fb9e8fc8ea1de442f6bb")
+                                                .then(function (data) {
+                                                    expect(data).null;
+                                                })
+                                        });
+
+                                        it('成功', function () {
+                                            return orderRepository.find(fooOrderId)
+                                                .then(function (data) {
+                                                    expect(data).eql(foo);
+                                                })
+                                        })
+                                    });
+
+                                    describe("检查当前版本", function () {
+                                        it('订单不存在', function () {
+                                            return orderRepository.checkVersion("5a29fb9e8fc8ea1de442f6bb", fooVersion)
+                                                .then(function (data) {
+                                                    expect(data).eql(false);
+                                                })
+                                        });
+
+                                        it('版本不一致', function () {
+                                            return orderRepository.checkVersion(fooOrderId, fooVersion + 1)
+                                                .then(function (data) {
+                                                    expect(data).eql(false);
+                                                })
+                                        });
+
+                                        it('当前版本存在', function () {
+                                            return orderRepository.checkVersion(fooOrderId, fooVersion)
+                                                .then(function (data) {
+                                                    expect(data).eql(true);
+                                                })
+                                        })
                                     });
                                 });
 
