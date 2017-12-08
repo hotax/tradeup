@@ -34,10 +34,10 @@ module.exports = {
         return Model.findOne({_id: id, __v: version})
             .then(function (data) {
                 if (!data) return Promise.reject(false);
-                return data.remove();
-            })
-            .then(function (data) {
-                return true;
+                return data.remove()
+                    .then(function () {
+                        return true;
+                    })
             })
             .catch(function (data) {
                 return false;
