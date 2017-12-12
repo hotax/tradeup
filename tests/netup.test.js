@@ -371,11 +371,295 @@ describe('tradup', function () {
                 describe('业务', function () {
                     describe('基于消息', function () {
                         describe("销售", function () {
+                            var orderId;
+                            beforeEach(function () {
+                                orderId = "5a29fb9e8fc8ea1de442f6bb";
+                            });
+
+                            describe("订单内容存储", function () {
+                                var dbSchema, orderRepository;
+                                var fooDraftData, fooOrderId, fooVersion, foo;
+                                var draftData;
+
+                                beforeEach(function () {
+                                    fooDraftData = {
+                                        "orderNo": "00001",
+                                        "customer": "cust0001",
+                                        "items": [
+                                            {
+                                                "no": "001",
+                                                "product": "p0007"
+                                            },
+                                            {
+                                                "no": "002",
+                                                "product": "p0008"
+                                            }
+                                        ],
+                                        "sales": "seles0002",
+                                        "createDate": new Date(2017, 12, 6).toJSON()
+                                    };
+                                    dbSchema = require('../server/ANSteel/data/models/salesorder');
+                                    return new dbSchema(fooDraftData).save()
+                                        .then(function (data) {
+                                            fooOrderId = data.id;
+                                            fooVersion = data.__v;
+                                            foo = data.toJSON();
+                                            return orderRepository = require('../server/ANSteel/biz/sales/OrderRepository');
+                                        })
+                                });
+
+                                it("新增", function () {
+                                    draftData = Object.assign({}, fooDraftData);
+                                    draftData.orderNo = "feefeefee";
+                                    return orderRepository.insert(draftData)
+                                        .then(function (data) {
+                                            var expected = Object.assign({
+                                                id: data.id,
+                                                modifiedDate: data.modifiedDate,
+                                                __v: data.__v
+                                            }, draftData);
+
+                                            expect(data).eql(expected);
+                                        })
+                                });
+
+                                describe("更新", function () {
+                                    it('订单不存在', function () {
+                                        return orderRepository.update("5a29fb9e8fc8ea1de442f6bb", {})
+                                            .then(function (data) {
+                                                expect(data).eql(false);
+                                            })
+                                    });
+
+                                    it('版本不一致', function () {
+                                        return orderRepository.update(fooOrderId, {__v: fooVersion + 1})
+                                            .then(function (data) {
+                                                expect(data).eql(false);
+                                            })
+                                    });
+
+                                    it('更新成功', function () {
+                                        var no = "ffffff";
+                                        var items = [foo.items[1]];
+                                        var updatedFoo = Object.assign({}, foo);
+                                        updatedFoo.orderNo = no;
+                                        updatedFoo.items = items;
+                                        return orderRepository.update(fooOrderId, updatedFoo)
+                                            .then(function (data) {
+                                                expect(data).eql(true);
+                                                return dbSchema.findById(fooOrderId);
+                                            })
+                                            .then(function (data) {
+                                                data = data.toJSON();
+                                                expect(data.__v).not.eql(updatedFoo.__v);
+                                                delete data.__v;
+                                                delete updatedFoo.__v;
+                                                expect(data).eql(updatedFoo);
+                                            })
+                                    })
+                                });
+
+                                describe("删除", function () {
+                                    it('订单不存在', function () {
+                                        return orderRepository.delete("5a29fb9e8fc8ea1de442f6bb", fooVersion)
+                                            .then(function (data) {
+                                                expect(data).eql(false);
+                                            })
+                                    });
+
+                                    it('版本不一致', function () {
+                                        return orderRepository.delete(fooOrderId, fooVersion + 1)
+                                            .then(function (data) {
+                                                expect(data).eql(false);
+                                            })
+                                    });
+
+                                    it('成功', function () {
+                                        return orderRepository.delete(fooOrderId, fooVersion)
+                                            .then(function (data) {
+                                                expect(data).eql(true);
+                                                return dbSchema.findById(fooOrderId);
+                                            })
+                                            .then(function (data) {
+                                                expect(data).null;
+                                            })
+                                    })
+                                });
+
+                                describe("查询", function () {
+                                    it('订单不存在', function () {
+                                        return orderRepository.findById("5a29fb9e8fc8ea1de442f6bb")
+                                            .then(function (data) {
+                                                expect(data).null;
+                                            })
+                                    });
+
+                                    it('成功', function () {
+                                        return orderRepository.findById(fooOrderId)
+                                            .then(function (data) {
+                                                expect(data).eql(foo);
+                                            })
+                                    })
+                                });
+
+                                describe("检查当前版本", function () {
+                                    it('订单不存在', function () {
+                                        return orderRepository.checkVersion("5a29fb9e8fc8ea1de442f6bb", fooVersion)
+                                            .then(function (data) {
+                                                expect(data).eql(false);
+                                            })
+                                    });
+
+                                    it('版本不一致', function () {
+                                        return orderRepository.checkVersion(fooOrderId, fooVersion + 1)
+                                            .then(function (data) {
+                                                expect(data).eql(false);
+                                            })
+                                    });
+
+                                    it('当前版本存在', function () {
+                                        return orderRepository.checkVersion(fooOrderId, fooVersion)
+                                            .then(function (data) {
+                                                expect(data).eql(true);
+                                            })
+                                    })
+                                });
+                            });
+
+                            describe("订单状态存储", function () {
+                                var dbSchema, orderStateRepository;
+                                var anotherOrderId, state;
+                                beforeEach(function () {
+                                    state = "foostate";
+                                    anotherOrderId = "5a29fb9e8fc8ea1de442f6bc";
+                                    dbSchema = require('../server/ANSteel/data/models/orderState');
+                                    return new dbSchema({
+                                        order: orderId,
+                                        state: state
+                                    }).save()
+                                        .then(function (data) {
+                                            orderStateRepository = require('../server/ANSteel/biz/sales/OrderStateRepository');
+                                        })
+                                });
+
+                                describe('保存初始状态', function () {
+                                    it("保存失败 - 状态冲突", function () {
+                                        return orderStateRepository.init(orderId, "otherstate")
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (reason) {
+                                                expect(reason).eql(orderStateRepository.REASON_CONFLICT);
+                                            })
+                                    });
+
+                                    it("已存在该订单状态", function () {
+                                        return orderStateRepository.init(orderId, state)
+                                            .then(function (data) {
+                                                expect(data).eql({
+                                                    order: orderId,
+                                                    state: state
+                                                });
+                                            })
+                                    });
+
+                                    it("保存新订单状态成功", function () {
+                                        return orderStateRepository.init(anotherOrderId, state)
+                                            .then(function (data) {
+                                                expect(data).eql({
+                                                    order: anotherOrderId,
+                                                    state: state
+                                                });
+                                            })
+                                    });
+                                });
+
+                                describe("更新", function () {
+                                    var newState;
+                                    beforeEach(function () {
+                                        newState = "newstate";
+                                    });
+
+                                    it('订单不存在', function () {
+                                        return orderStateRepository.update(anotherOrderId, newState)
+                                            .then(function (data) {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (reason) {
+                                                expect(reason).eql(orderStateRepository.REASON_NOT_FOUND);
+                                            })
+                                    });
+
+                                    it('状态不一致', function () {
+                                        return orderStateRepository.update(anotherOrderId, newState, "otherstate")
+                                            .then(function (data) {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (reason) {
+                                                expect(reason).eql(orderStateRepository.REASON_NOT_FOUND);
+                                            })
+                                    });
+
+                                    it('更新成功', function () {
+                                        var newState = "newstate";
+                                        return orderStateRepository.update(orderId, newState, state)
+                                            .then(function (data) {
+                                                expect(data).not.null;
+                                            })
+                                    })
+                                });
+
+                                it("删除", function () {
+                                    return orderStateRepository.delete(orderId)
+                                        .then(function (data) {
+                                            expect(data).not.null;
+                                            return dbSchema.findOne({order: orderId});
+                                        })
+                                        .then(function (data) {
+                                            expect(data).null;
+                                        })
+                                });
+
+                                describe("查询指定订单状态", function () {
+                                    it("未找到指定订单状态", function () {
+                                        return orderStateRepository.getState(anotherOrderId)
+                                            .then(function (data) {
+                                                expect(data).null;
+                                            })
+                                    });
+
+                                    it("查询成功", function () {
+                                        return orderStateRepository.getState(orderId)
+                                            .then(function (data) {
+                                                expect(data).eql(state);
+                                            })
+                                    });
+                                });
+
+                                it("列出指定状态的所有订单", function () {
+                                    return orderStateRepository.listByState(state)
+                                        .then(function (data) {
+                                            expect(data).eql([{
+                                                order: orderId
+                                            }])
+                                        })
+                                });
+                            });
+
+                            it("订单表述", function () {
+                                var orderRepresentation = require("../server/ANSteel/biz/sales/OrderRepresentation");
+                                var content = {content: "order content"};
+                                var state = "order state";
+                                expect(orderRepresentation.compose(content, state)).eql({
+                                    content: "order content",
+                                    state: state
+                                });
+                            });
+
                             describe("订单生命周期", function () {
                                 var salesOrderLifecycle, stateResitoryStub;
-                                var orderId, state;
+                                var state;
                                 beforeEach(function () {
-                                    orderId = "5a29fb9e8fc8ea1de442f6bb";
                                     stateResitoryStub = sinon.stub({
                                         init: function (id, state) {
                                         },
@@ -392,109 +676,6 @@ describe('tradup', function () {
                                         .then(function (data) {
                                             expect(data).eql(state);
                                         })
-                                });
-
-                                describe("订单状态存储", function () {
-                                    var dbSchema, orderStateRepository;
-                                    var anotherOrderId;
-                                    beforeEach(function () {
-                                        anotherOrderId = "5a29fb9e8fc8ea1de442f6bc"
-                                        dbSchema = require('../server/ANSteel/data/models/orderState');
-                                        return new dbSchema({
-                                            order: orderId,
-                                            state: state
-                                        }).save()
-                                            .then(function (data) {
-                                                orderStateRepository = require('../server/ANSteel/biz/sales/OrderStateRepository');
-                                            })
-                                    });
-
-                                    describe('保存初始状态', function () {
-                                        it("保存失败 - 状态冲突", function () {
-                                            return orderStateRepository.init(orderId, "otherstate")
-                                                .then(function () {
-                                                    throw "test failed";
-                                                })
-                                                .catch(function (reason) {
-                                                    expect(reason).eql(orderStateRepository.REASON_CONFLICT);
-                                                })
-                                        });
-
-                                        it("已存在该订单状态", function () {
-                                            return orderStateRepository.init(orderId, state)
-                                                .then(function (data) {
-                                                    expect(data).eql({
-                                                        order: orderId,
-                                                        state: state
-                                                    });
-                                                })
-                                        });
-
-                                        it("保存新订单状态成功", function () {
-                                            return orderStateRepository.init(anotherOrderId, state)
-                                                .then(function (data) {
-                                                    expect(data).eql({
-                                                        order: anotherOrderId,
-                                                        state: state
-                                                    });
-                                                })
-                                        });
-                                    });
-
-                                    describe("更新", function () {
-                                        var newState;
-                                        beforeEach(function () {
-                                            newState = "newstate";
-                                        });
-
-                                        it('订单不存在', function () {
-                                            return orderStateRepository.update(anotherOrderId, newState)
-                                                .then(function (data) {
-                                                    throw "test failed";
-                                                })
-                                                .catch(function (reason) {
-                                                    expect(reason).eql(orderStateRepository.REASON_NOT_FOUND);
-                                                })
-                                        });
-
-                                        it('状态不一致', function () {
-                                            return orderStateRepository.update(anotherOrderId, newState, "otherstate")
-                                                .then(function (data) {
-                                                    throw "test failed";
-                                                })
-                                                .catch(function (reason) {
-                                                    expect(reason).eql(orderStateRepository.REASON_NOT_FOUND);
-                                                })
-                                        });
-
-                                        it('更新成功', function () {
-                                            var newState = "newstate";
-                                            return orderStateRepository.update(orderId, newState, state)
-                                                .then(function (data) {
-                                                    expect(data).not.null;
-                                                })
-                                        })
-                                    });
-
-                                    it("删除", function () {
-                                        return orderStateRepository.delete(orderId)
-                                            .then(function (data) {
-                                                expect(data).not.null;
-                                                return dbSchema.findOne({order: orderId});
-                                            })
-                                            .then(function (data) {
-                                                expect(data).null;
-                                            })
-                                    });
-
-                                    it("列出指定状态的所有订单", function () {
-                                        return orderStateRepository.listByState(state)
-                                            .then(function (data) {
-                                                expect(data).eql([{
-                                                    order: orderId
-                                                }])
-                                            })
-                                    });
                                 });
 
                                 describe("查询特定状态下的所有订单", function () {
@@ -528,157 +709,7 @@ describe('tradup', function () {
                                 })
                             });
 
-                            describe("订单草拟", function () {
-                                describe("订单存储", function () {
-                                    var dbSchema, orderRepository;
-                                    var fooDraftData, fooOrderId, fooVersion, foo;
-                                    var draftData;
-
-                                    beforeEach(function () {
-                                        fooDraftData = {
-                                            "orderNo": "00001",
-                                            "customer": "cust0001",
-                                            "items": [
-                                                {
-                                                    "no": "001",
-                                                    "product": "p0007"
-                                                },
-                                                {
-                                                    "no": "002",
-                                                    "product": "p0008"
-                                                }
-                                            ],
-                                            "sales": "seles0002",
-                                            "createDate": new Date(2017, 12, 6).toJSON()
-                                        };
-                                        dbSchema = require('../server/ANSteel/data/models/salesorder');
-                                        return new dbSchema(fooDraftData).save()
-                                            .then(function (data) {
-                                                fooOrderId = data.id;
-                                                fooVersion = data.__v;
-                                                foo = data.toJSON();
-                                                return orderRepository = require('../server/ANSteel/biz/sales/OrderRepository');
-                                            })
-                                    });
-
-                                    it("新增", function () {
-                                        draftData = Object.assign({}, fooDraftData);
-                                        draftData.orderNo = "feefeefee";
-                                        return orderRepository.insert(draftData)
-                                            .then(function (data) {
-                                                var expected = Object.assign({
-                                                    id: data.id,
-                                                    modifiedDate: data.modifiedDate,
-                                                    __v: data.__v
-                                                }, draftData);
-
-                                                expect(data).eql(expected);
-                                            })
-                                    });
-
-                                    describe("更新", function () {
-                                        it('订单不存在', function () {
-                                            return orderRepository.update("5a29fb9e8fc8ea1de442f6bb", {})
-                                                .then(function (data) {
-                                                    expect(data).eql(false);
-                                                })
-                                        });
-
-                                        it('版本不一致', function () {
-                                            return orderRepository.update(fooOrderId, {__v: fooVersion + 1})
-                                                .then(function (data) {
-                                                    expect(data).eql(false);
-                                                })
-                                        });
-
-                                        it('更新成功', function () {
-                                            var no = "ffffff";
-                                            var items = [foo.items[1]];
-                                            var updatedFoo = Object.assign({}, foo);
-                                            updatedFoo.orderNo = no;
-                                            updatedFoo.items = items;
-                                            return orderRepository.update(fooOrderId, updatedFoo)
-                                                .then(function (data) {
-                                                    expect(data).eql(true);
-                                                    return dbSchema.findById(fooOrderId);
-                                                })
-                                                .then(function (data) {
-                                                    data = data.toJSON();
-                                                    expect(data.__v).not.eql(updatedFoo.__v);
-                                                    delete data.__v;
-                                                    delete updatedFoo.__v;
-                                                    expect(data).eql(updatedFoo);
-                                                })
-                                        })
-                                    });
-
-                                    describe("删除", function () {
-                                        it('订单不存在', function () {
-                                            return orderRepository.delete("5a29fb9e8fc8ea1de442f6bb", fooVersion)
-                                                .then(function (data) {
-                                                    expect(data).eql(false);
-                                                })
-                                        });
-
-                                        it('版本不一致', function () {
-                                            return orderRepository.delete(fooOrderId, fooVersion + 1)
-                                                .then(function (data) {
-                                                    expect(data).eql(false);
-                                                })
-                                        });
-
-                                        it('成功', function () {
-                                            return orderRepository.delete(fooOrderId, fooVersion)
-                                                .then(function (data) {
-                                                    expect(data).eql(true);
-                                                    return dbSchema.findById(fooOrderId);
-                                                })
-                                                .then(function (data) {
-                                                    expect(data).null;
-                                                })
-                                        })
-                                    });
-
-                                    describe("查询", function () {
-                                        it('订单不存在', function () {
-                                            return orderRepository.find("5a29fb9e8fc8ea1de442f6bb")
-                                                .then(function (data) {
-                                                    expect(data).null;
-                                                })
-                                        });
-
-                                        it('成功', function () {
-                                            return orderRepository.find(fooOrderId)
-                                                .then(function (data) {
-                                                    expect(data).eql(foo);
-                                                })
-                                        })
-                                    });
-
-                                    describe("检查当前版本", function () {
-                                        it('订单不存在', function () {
-                                            return orderRepository.checkVersion("5a29fb9e8fc8ea1de442f6bb", fooVersion)
-                                                .then(function (data) {
-                                                    expect(data).eql(false);
-                                                })
-                                        });
-
-                                        it('版本不一致', function () {
-                                            return orderRepository.checkVersion(fooOrderId, fooVersion + 1)
-                                                .then(function (data) {
-                                                    expect(data).eql(false);
-                                                })
-                                        });
-
-                                        it('当前版本存在', function () {
-                                            return orderRepository.checkVersion(fooOrderId, fooVersion)
-                                                .then(function (data) {
-                                                    expect(data).eql(true);
-                                                })
-                                        })
-                                    });
-                                });
-
+                            describe("订单草拟阶段", function () {
                                 describe("草拟订单", function () {
                                     var orderDrafting, orderRepositoryStub, lifecycleStub;
                                     var draft, reason;
@@ -693,7 +724,7 @@ describe('tradup', function () {
                                             },
                                             cancel: function (id, version) {
                                             },
-                                            find: function (id) {
+                                            findById: function (id) {
                                             }
                                         });
 
@@ -761,6 +792,82 @@ describe('tradup', function () {
                             });
 
                             describe("订单执行", function () {
+                            });
+
+                            describe("销售订单管理", function () {
+                                var orderManagement, stateStub, contentStub, representStub;
+                                beforeEach(function () {
+                                    stateStub = sinon.stub({
+                                        getState: function (id) {
+                                        }
+                                    });
+                                    contentStub = sinon.stub({
+                                        findById: function (id) {
+                                        }
+                                    });
+                                    representStub = sinon.stub({
+                                        compose: function (content, state) {
+                                        }
+                                    });
+
+                                    orderManagement = require('../server/ANSteel/biz/sales/OrderManagement')
+                                    (stateStub, contentStub, representStub);
+                                });
+
+                                describe("查询订单详情", function () {
+                                    var idStateNotFount, idContentNotFount;
+                                    var stateReason, contentReason;
+                                    var state, content, representation;
+                                    beforeEach(function () {
+                                        state = "any state";
+                                        content = {content: "any content"};
+                                        representation = {representation: "order representation"};
+                                        representStub.compose.withArgs(content, state).returns(representation);
+                                    });
+
+                                    it("未找到指定订单", function () {
+                                        stateStub.getState.withArgs(orderId).returns(Promise.resolve(null));
+                                        contentStub.findById.withArgs(orderId).returns(Promise.resolve(null));
+                                        return orderManagement.findById(orderId)
+                                            .then(function (data) {
+                                                expect(data).null;
+                                            })
+                                    });
+
+                                    it("内部数据不一致--未找到订单状态", function () {
+                                        stateStub.getState.withArgs(orderId).returns(Promise.resolve(null));
+                                        contentStub.findById.withArgs(orderId).returns(Promise.resolve(content));
+                                        return orderManagement.findById(orderId)
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (data) {
+                                                expect(data).eql(orderManagement.REASON_INTERNAL_DATA_ERROR);
+                                            })
+                                    });
+
+                                    it("内部数据不一致--未找到订单内容", function () {
+                                        stateStub.getState.withArgs(orderId).returns(Promise.resolve(state));
+                                        contentStub.findById.withArgs(orderId).returns(Promise.resolve(null));
+                                        return orderManagement.findById(orderId)
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (data) {
+                                                expect(data).eql(orderManagement.REASON_INTERNAL_DATA_ERROR);
+                                            })
+                                    });
+
+                                    it("查询订单成功", function () {
+                                        stateStub.getState.withArgs(orderId).returns(Promise.resolve(state));
+                                        contentStub.findById.withArgs(orderId).returns(Promise.resolve(content));
+                                        return orderManagement.findById(orderId)
+                                            .then(function (data) {
+                                                expect(data).eql(representation);
+                                            })
+                                    });
+                                });
+
                             });
                         });
 

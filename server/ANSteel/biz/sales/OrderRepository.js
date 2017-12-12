@@ -43,7 +43,7 @@ module.exports = {
                 return false;
             })
     },
-    find: function (id) {
+    findById: function (id) {
         return Model.findById(id)
             .then(function (data) {
                 return data ? data.toJSON() : null;

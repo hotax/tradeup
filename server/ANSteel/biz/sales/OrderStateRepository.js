@@ -10,6 +10,13 @@ const mongoose = require('mongoose'),
 module.exports = {
     "REASON_CONFLICT": "conflict",
     "REASON_NOT_FOUND": "not found",
+    getState: function (orderId) {
+        var reason = this.REASON_NOT_FOUND;
+        return Model.findOne({order: orderId})
+            .then(function (data) {
+                return data ? data.state : null;
+            })
+    },
     listByState: function (state) {
         return Model.find({state: state})
             .then(function (data) {
