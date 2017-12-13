@@ -39,14 +39,17 @@ module.exports = function (helper) {
                 .then(function () {
                     return orders;
                 })
+        },
+        submit: function (orderId) {
+            return helper.next(orderId);
         }
     };
 
     function __checkStateIsDraft(id) {
         return helper.isDraft(id)
             .then(function (isDraft) {
-                if(isDraft == null) throw obj.REASON_STATE_NOT_FOUND;
-                if(!isDraft) throw obj.REASON_STATE_CONFLICT;
+                if (isDraft == null) throw obj.REASON_STATE_NOT_FOUND;
+                if (!isDraft) throw obj.REASON_STATE_CONFLICT;
             })
     }
 
@@ -56,7 +59,7 @@ module.exports = function (helper) {
                 return helper.update(orderId, version, draft);
             })
             .then(function (data) {
-                if(data.n === 0) throw obj.REASON_CONTENT_CONFLICT;
+                if (data.n === 0) throw obj.REASON_CONTENT_CONFLICT;
                 return data;
             })
     };

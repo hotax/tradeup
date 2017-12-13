@@ -661,7 +661,11 @@ describe('tradup', function () {
                                 var state;
                                 beforeEach(function () {
                                     stateResitoryStub = sinon.stub({
-                                        init: function (id, state) {
+                                        create: function (id, state) {
+                                        },
+                                        getState: function (id) {
+                                        },
+                                        update: function (id, state, oldstate) {
                                         },
                                         listByState: function (state) {
                                         }
@@ -671,10 +675,18 @@ describe('tradup', function () {
                                 });
 
                                 it("接纳订单草稿", function () {
-                                    stateResitoryStub.init.withArgs(orderId, state).returns(Promise.resolve());
+                                    stateResitoryStub.create.withArgs(orderId, state).returns(Promise.resolve());
                                     return salesOrderLifecycle.acceptDraft(orderId)
                                         .then(function (data) {
                                             expect(data).eql(state);
+                                        })
+                                });
+
+                                it("提交订单草稿", function () {
+                                    stateResitoryStub.update.withArgs(orderId, salesOrderLifecycle.BIZREVIEW, salesOrderLifecycle.DRAFT).returns(Promise.resolve());
+                                    return salesOrderLifecycle.submitDraft(orderId)
+                                        .then(function (data) {
+                                            expect(data).eql(salesOrderLifecycle.BIZREVIEW);
                                         })
                                 });
 
@@ -726,6 +738,8 @@ describe('tradup', function () {
                                         update: function (id, version, draft) {
                                         },
                                         delete: function (id) {
+                                        },
+                                        next:function (id) {
                                         }
                                     });
 
@@ -869,6 +883,15 @@ describe('tradup', function () {
                                                 expect(helperStub.delete).calledWith(orderId).calledOnce;
                                             })
                                     });
+                                });
+
+                                it("提交订单草稿", function () {
+                                    var orderId = "123456";
+                                    helperStub.next.withArgs(orderId).returns(Promise.resolve());
+                                    return orderDrafting.submit(orderId)
+                                        .then(function () {
+                                            expect(helperStub.next).calledWith(orderId).calledOnce;
+                                        })
                                 });
                             });
 

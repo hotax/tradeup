@@ -1,10 +1,8 @@
 /**
  * Created by clx on 2017/12/5.
  */
-var __stateRepository;
 
 module.exports = function (stateRepository) {
-    __stateRepository = stateRepository;
     return {
         DRAFT: 'draft',
         BIZREVIEW: 'bizreview',
@@ -14,28 +12,35 @@ module.exports = function (stateRepository) {
         CLEARED: 'cleared',
         acceptDraft: function (id) {
             var state = this.DRAFT;
-            return __stateRepository.init(id, state)
+            return stateRepository.create(id, state)
                 .then(function () {
                     return state;
                 })
         },
+        submitDraft: function (id) {
+            var me = this;
+            return stateRepository.update(id, me.BIZREVIEW, me.DRAFT)
+                .then(function () {
+                    return me.BIZREVIEW;
+                })
+        },
         listDrafts: function () {
-            return __stateRepository.listByState(this.DRAFT);
+            return stateRepository.listByState(this.DRAFT);
         },
         listBizReview: function () {
-            return __stateRepository.listByState(this.BIZREVIEW);
+            return stateRepository.listByState(this.BIZREVIEW);
         },
         listFinacialReview: function () {
-            return __stateRepository.listByState(this.FINACIALREVIEW);
+            return stateRepository.listByState(this.FINACIALREVIEW);
         },
         listExecuting: function () {
-            return __stateRepository.listByState(this.EXECUTING);
+            return stateRepository.listByState(this.EXECUTING);
         },
         listStop: function () {
-            return __stateRepository.listByState(this.STOP);
+            return stateRepository.listByState(this.STOP);
         },
         listCleared: function () {
-            return __stateRepository.listByState(this.CLEARED);
+            return stateRepository.listByState(this.CLEARED);
         }
     }
 };
