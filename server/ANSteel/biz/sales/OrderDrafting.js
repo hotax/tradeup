@@ -4,7 +4,7 @@
 const Promise = require('bluebird');
 
 module.exports = function (helper) {
-    return {
+    var obj = {
         REASON_STATE_CONFLICT: "State_Conflict",
         REASON_CONTENT_CONFLICT: "Content_Conflict",
         REASON_STATE_NOT_FOUND: "State_Not_Found",
@@ -39,19 +39,33 @@ module.exports = function (helper) {
                 .then(function () {
                     return orders;
                 })
-        },
-        update: function (orderId, version, draft) {
-            var me = this;
-            return helper.isDraft(orderId)
-                .then(function (isDraft) {
-                    if(isDraft == null) throw me.REASON_STATE_NOT_FOUND;
-                    if(!isDraft) throw me.REASON_STATE_CONFLICT;
-                    return helper.update(orderId, version, draft);
-                })
-                .then(function (data) {
-                    if(data.n === 0) throw me.REASON_CONTENT_CONFLICT;
-                    return data;
-                })
         }
     };
+
+    function __checkStateIsDraft(id) {
+        return helper.isDraft(id)
+            .then(function (isDraft) {
+                if(isDraft == null) throw obj.REASON_STATE_NOT_FOUND;
+                if(!isDraft) throw obj.REASON_STATE_CONFLICT;
+            })
+    }
+
+    obj.update = function (orderId, version, draft) {
+        return __checkStateIsDraft(orderId)
+            .then(function () {
+                return helper.update(orderId, version, draft);
+            })
+            .then(function (data) {
+                if(data.n === 0) throw obj.REASON_CONTENT_CONFLICT;
+                return data;
+            })
+    };
+
+    obj.delete = function (orderId) {
+        return __checkStateIsDraft(orderId)
+            .then(function () {
+                return helper.delete(orderId);
+            })
+    };
+    return obj;
 };

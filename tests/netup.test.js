@@ -724,6 +724,8 @@ describe('tradup', function () {
                                         isDraft: function (id) {
                                         },
                                         update: function (id, version, draft) {
+                                        },
+                                        delete: function (id) {
                                         }
                                     });
 
@@ -834,6 +836,39 @@ describe('tradup', function () {
                                 });
 
                                 describe("删除订单", function () {
+                                    var orderId = "123456";
+                                    var version = 23;
+
+                                    it("未找到订单状态", function () {
+                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(null));
+                                        return orderDrafting.delete(orderId)
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (data) {
+                                                expect(data).eql(orderDrafting.REASON_STATE_NOT_FOUND);
+                                            })
+                                    });
+
+                                    it("不处于草稿阶段不可删除", function () {
+                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(false));
+                                        return orderDrafting.delete(orderId)
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (data) {
+                                                expect(data).eql(orderDrafting.REASON_STATE_CONFLICT);
+                                            })
+                                    });
+
+                                    it("删除成功", function () {
+                                        helperStub.delete = sinon.spy();
+                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(true));
+                                        return orderDrafting.delete(orderId)
+                                            .then(function () {
+                                                expect(helperStub.delete).calledWith(orderId).calledOnce;
+                                            })
+                                    });
                                 });
                             });
 
