@@ -710,34 +710,46 @@ describe('tradup', function () {
                             });
 
                             describe("订单草拟阶段", function () {
+                                var orderDrafting, helperStub;
+                                beforeEach(function () {
+                                    helperStub = sinon.stub({
+                                        create: function (draft) {
+                                        },
+                                        findById: function (id) {
+                                        },
+                                        entryLifecycle: function (id) {
+                                        },
+                                        list: function () {
+                                        }
+                                    });
+
+                                    orderDrafting = require('../server/ANSteel/biz/sales/OrderDrafting')(helperStub);
+                                });
+
+                                it("列出当前所有订单草稿", function () {
+                                    var fooid = "12345";
+                                    var feeid = "23456";
+                                    helperStub.list.returns(Promise.resolve([fooid, feeid]));
+                                    var fooDraft = {draft: "foo"};
+                                    var feeDraft = {draft: "fee"};
+                                    helperStub.findById.withArgs(fooid).returns(Promise.resolve(fooDraft));
+                                    helperStub.findById.withArgs(feeid).returns(Promise.resolve(feeDraft));
+
+                                    return orderDrafting.listDrafts()
+                                        .then(function (data) {
+                                            expect(data).eql([fooDraft, feeDraft]);
+                                        })
+                                });
+
                                 describe("草拟订单", function () {
-                                    var orderDrafting, orderRepositoryStub, lifecycleStub;
                                     var draft, reason;
                                     beforeEach(function () {
                                         draft = {draft: "any order draft content"};
                                         reason = {reason: "any reason"};
-
-                                        orderRepositoryStub = sinon.stub({
-                                            create: function (draft) {
-                                            },
-                                            update: function (id, version, data) {
-                                            },
-                                            cancel: function (id, version) {
-                                            },
-                                            findById: function (id) {
-                                            }
-                                        });
-
-                                        lifecycleStub = sinon.stub({
-                                            entry: function (id) {
-                                            }
-                                        });
-
-                                        orderDrafting = require('../server/ANSteel/biz/sales/OrderDrafting')(orderRepositoryStub, lifecycleStub);
                                     });
 
                                     it("创建订单失败", function () {
-                                        orderRepositoryStub.create.withArgs(draft).returns(Promise.reject(reason));
+                                        helperStub.create.withArgs(draft).returns(Promise.reject(reason));
                                         return orderDrafting.draft(draft)
                                             .then(function () {
                                                 throw "test failed";
@@ -750,8 +762,8 @@ describe('tradup', function () {
                                     it("设置订单初始状态失败", function () {
                                         var orderId = "123344";
                                         var order = {id: orderId};
-                                        orderRepositoryStub.create.withArgs(draft).returns(Promise.resolve(order));
-                                        lifecycleStub.entry.withArgs(orderId).returns(Promise.reject(reason));
+                                        helperStub.create.withArgs(draft).returns(Promise.resolve(order));
+                                        helperStub.entryLifecycle.withArgs(orderId).returns(Promise.reject(reason));
                                         return orderDrafting.draft(draft)
                                             .then(function () {
                                                 throw "test failed";
@@ -764,10 +776,10 @@ describe('tradup', function () {
                                     it("草拟订单成功", function () {
                                         var orderId = "123344";
                                         var order = {id: orderId};
-                                        orderRepositoryStub.create.withArgs(draft).returns(Promise.resolve(order));
+                                        helperStub.create.withArgs(draft).returns(Promise.resolve(order));
                                         var state = {state: "the state"};
                                         var expectedOrder = Object.assign({state: state}, order);
-                                        lifecycleStub.entry.withArgs(orderId).returns(Promise.resolve(state));
+                                        helperStub.entryLifecycle.withArgs(orderId).returns(Promise.resolve(state));
                                         return orderDrafting.draft(draft)
                                             .then(function (data) {
                                                 expect(data).eql(expectedOrder);
@@ -779,9 +791,6 @@ describe('tradup', function () {
                                 });
 
                                 describe("删除订单", function () {
-                                });
-
-                                describe("查询指定订单", function () {
                                 });
                             });
 

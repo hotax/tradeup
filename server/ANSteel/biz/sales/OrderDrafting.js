@@ -1,21 +1,40 @@
 /**
  * Created by clx on 2017/12/5.
  */
-var __repository, __lifecycle;
-module.exports = function (repository, lifecycle) {
-    __repository = repository;
-    __lifecycle = lifecycle;
+const Promise = require('bluebird');
+
+module.exports = function (helper) {
     return {
         draft: function (draftData) {
             var order;
-            return __repository.create(draftData)
+            return helper.create(draftData)
                 .then(function (data) {
                     order = data;
-                    return __lifecycle.entry(data.id);
+                    return helper.entryLifecycle(data.id);
                 })
                 .then(function (data) {
                     order.state = data;
                     return order;
+                })
+        },
+        listDrafts: function () {
+            var orders = [];
+            return helper.list()
+                .then(function (ids) {
+                    var tasks = [];
+                    var process = function (id, index) {
+                        return helper.findById(id)
+                            .then(function (data) {
+                                orders[index] = data;
+                            })
+                    };
+                    for(var i=0; i<ids.length; i++){
+                        tasks.push(process(ids[i], i));
+                    }
+                    return Promise.all(tasks)
+                })
+                .then(function () {
+                    return orders;
                 })
         }
     };
