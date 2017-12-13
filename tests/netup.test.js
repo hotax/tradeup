@@ -720,6 +720,10 @@ describe('tradup', function () {
                                         entryLifecycle: function (id) {
                                         },
                                         list: function () {
+                                        },
+                                        isDraft: function (id) {
+                                        },
+                                        update: function (id, version, draft) {
                                         }
                                     });
 
@@ -787,7 +791,46 @@ describe('tradup', function () {
                                     });
                                 });
 
-                                describe("修订订单", function () {
+                                describe("修改订单", function () {
+                                    var orderId = "123456";
+                                    var version = 23;
+                                    var draft = {draft: "draft content includeing to be updated"};
+
+                                    it("未找到订单状态", function () {
+                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(null));
+                                        return orderDrafting.update(orderId, version, draft)
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (data) {
+                                                expect(data).eql(orderDrafting.REASON_STATE_NOT_FOUND);
+                                            })
+                                    });
+
+                                    it("不处于草稿阶段不可修改", function () {
+                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(false));
+                                        return orderDrafting.update(orderId, version, draft)
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (data) {
+                                                expect(data).eql(orderDrafting.REASON_STATE_CONFLICT);
+                                            })
+                                    });
+
+                                    it("版本不一致", function () {
+                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(true));
+                                        helperStub.update.withArgs(orderId, version, draft).returns(Promise.resolve({
+                                            n: 0
+                                        }));
+                                        return orderDrafting.update(orderId, version, draft)
+                                            .then(function () {
+                                                throw "test failed";
+                                            })
+                                            .catch(function (data) {
+                                                expect(data).eql(orderDrafting.REASON_CONTENT_CONFLICT);
+                                            })
+                                    });
                                 });
 
                                 describe("删除订单", function () {
