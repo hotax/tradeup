@@ -11,4 +11,5 @@ module.exports = function (onOpen) {
         /* other options */
     });
     mongoose.connection.on('open', onOpen);
+    /* chris  */
 }
