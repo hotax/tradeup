@@ -34,6 +34,7 @@
     "js2xmlparser": "^2.0.2",
     "jssha": "^2.2.0",
     "jszip": "^2.6.1",
+    "lodash": "^4.17.4",
     "log4js": "^0.6.38",
     "md5": "^2.2.1",
     "method-override": "^2.3.6",

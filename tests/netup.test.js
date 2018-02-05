@@ -723,6 +723,7 @@ describe('tradup', function () {
 
                             describe("订单草拟阶段", function () {
                                 var orderDrafting, helperStub;
+                                var orderId;
                                 beforeEach(function () {
                                     helperStub = sinon.stub({
                                         create: function (draft) {
@@ -731,19 +732,13 @@ describe('tradup', function () {
                                         },
                                         entryLifecycle: function (id) {
                                         },
+                                        dealWithEvent: function (event) {
+                                        },
                                         list: function () {
-                                        },
-                                        isDraft: function (id) {
-                                        },
-                                        update: function (id, version, draft) {
-                                        },
-                                        delete: function (id) {
-                                        },
-                                        next:function (id) {
                                         }
                                     });
-
                                     orderDrafting = require('../server/ANSteel/biz/sales/OrderDrafting')(helperStub);
+                                    orderId = "123456";
                                 });
 
                                 it("列出当前所有订单草稿", function () {
@@ -807,90 +802,41 @@ describe('tradup', function () {
                                     });
                                 });
 
-                                describe("修改订单", function () {
-                                    var orderId = "123456";
-                                    var version = 23;
+                                it("修改订单", function () {
                                     var draft = {draft: "draft content includeing to be updated"};
-
-                                    it("未找到订单状态", function () {
-                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(null));
-                                        return orderDrafting.update(orderId, version, draft)
-                                            .then(function () {
-                                                throw "test failed";
-                                            })
-                                            .catch(function (data) {
-                                                expect(data).eql(orderDrafting.REASON_STATE_NOT_FOUND);
-                                            })
-                                    });
-
-                                    it("不处于草稿阶段不可修改", function () {
-                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(false));
-                                        return orderDrafting.update(orderId, version, draft)
-                                            .then(function () {
-                                                throw "test failed";
-                                            })
-                                            .catch(function (data) {
-                                                expect(data).eql(orderDrafting.REASON_STATE_CONFLICT);
-                                            })
-                                    });
-
-                                    it("版本不一致", function () {
-                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(true));
-                                        helperStub.update.withArgs(orderId, version, draft).returns(Promise.resolve({
-                                            n: 0
-                                        }));
-                                        return orderDrafting.update(orderId, version, draft)
-                                            .then(function () {
-                                                throw "test failed";
-                                            })
-                                            .catch(function (data) {
-                                                expect(data).eql(orderDrafting.REASON_CONTENT_CONFLICT);
-                                            })
-                                    });
+                                    var event = {
+                                        name: "modify",
+                                        source: orderId,
+                                        data: draft
+                                    };
+                                    helperStub.dealWithEvent = sinon.spy();
+                                    return orderDrafting.update(orderId, draft)
+                                        .then(function () {
+                                            expect(helperStub.dealWithEvent).calledWith(event).calledOnce;
+                                        })
                                 });
 
-                                describe("删除订单", function () {
-                                    var orderId = "123456";
-                                    var version = 23;
-
-                                    it("未找到订单状态", function () {
-                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(null));
-                                        return orderDrafting.delete(orderId)
-                                            .then(function () {
-                                                throw "test failed";
-                                            })
-                                            .catch(function (data) {
-                                                expect(data).eql(orderDrafting.REASON_STATE_NOT_FOUND);
-                                            })
-                                    });
-
-                                    it("不处于草稿阶段不可删除", function () {
-                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(false));
-                                        return orderDrafting.delete(orderId)
-                                            .then(function () {
-                                                throw "test failed";
-                                            })
-                                            .catch(function (data) {
-                                                expect(data).eql(orderDrafting.REASON_STATE_CONFLICT);
-                                            })
-                                    });
-
-                                    it("删除成功", function () {
-                                        helperStub.delete = sinon.spy();
-                                        helperStub.isDraft.withArgs(orderId).returns(Promise.resolve(true));
-                                        return orderDrafting.delete(orderId)
-                                            .then(function () {
-                                                expect(helperStub.delete).calledWith(orderId).calledOnce;
-                                            })
-                                    });
+                                it("删除订单", function () {
+                                    var event = {
+                                        name: "delete",
+                                        source: orderId
+                                    };
+                                    helperStub.dealWithEvent = sinon.spy();
+                                    return orderDrafting.delete(orderId)
+                                        .then(function () {
+                                            expect(helperStub.dealWithEvent).calledWith(event).calledOnce;
+                                        })
                                 });
 
                                 it("提交订单草稿", function () {
-                                    var orderId = "123456";
-                                    helperStub.next.withArgs(orderId).returns(Promise.resolve());
+                                    var event = {
+                                        name: "submit",
+                                        source: orderId
+                                    };
+                                    helperStub.dealWithEvent = sinon.spy();
                                     return orderDrafting.submit(orderId)
                                         .then(function () {
-                                            expect(helperStub.next).calledWith(orderId).calledOnce;
+                                            expect(helperStub.dealWithEvent).calledWith(event).calledOnce;
                                         })
                                 });
                             });
@@ -2687,6 +2633,84 @@ describe('tradup', function () {
                 });
             });
         });
+
+        describe("生命周期", function () {
+            var lifecycleFactory, stateRepositoryStub;
+            var fsm, lifecycle, event, source, data, handlerSpy, currentState;
+            beforeEach(function () {
+                stateRepositoryStub = sinon.stub({
+                    init: function (source, state) {
+                    },
+                    current:function (source) {
+                    },
+                    update:function (source, state) {
+                    }
+                });
+                lifecycleFactory = require("../netup/app/Lifecycle")(stateRepositoryStub);
+
+                handlerSpy = sinon.spy();
+                currentState = "draft";
+                source = "foo";
+                data = {data: "any data"};
+                event = {
+                    source: source,
+                    data: data
+                }
+            });
+
+            it("进入生命周期", function () {
+                fsm = {
+                    init: "s1"
+                };
+                lifecycle = lifecycleFactory.create(fsm);
+                stateRepositoryStub.init.withArgs(source, "s1").returns(Promise.resolve(fsm.init));
+                return lifecycle.entry(source)
+                    .then(function (value) {
+                        expect(value).eql(fsm.init);
+                    })
+            });
+
+            it("接受当前事件, 保持状态不变", function () {
+                fsm = {
+                    transitions: [
+                        { name: 'modify',   from: 'draft',  to: 'draft' }
+                    ],
+                    methods: {
+                        onModify: handlerSpy
+                    }
+                };
+                lifecycle = lifecycleFactory.create(fsm);
+
+                event.name = "modify";
+                stateRepositoryStub.current.withArgs(source).returns(Promise.resolve("draft"));
+                return lifecycle.dealWith(event)
+                    .then(function () {
+                        expect(handlerSpy).calledWith(source, data).calledOnce;
+                    })
+            });
+
+            it("接受当前事件, 状态发生迁移", function () {
+                fsm = {
+                    transitions: [
+                        { name: 'submit',   from: 'draft',  to: 'reviewing' }
+                    ],
+                    methods: {
+                        onSubmit: handlerSpy
+                    }
+                };
+                lifecycle = lifecycleFactory.create(fsm);
+
+                event.name = "submit";
+                stateRepositoryStub.current.withArgs(source).returns(Promise.resolve("draft"));
+                stateRepositoryStub.update = sinon.spy();
+                return lifecycle.dealWith(event)
+                    .then(function () {
+                        //TODO:是否需要考虑调用次序？
+                        expect(handlerSpy).calledWith(source, data).calledOnce;
+                        expect(stateRepositoryStub.update).calledWith(source, "reviewing").calledOnce;
+                    })
+            })
+        })
     });
 });
 
