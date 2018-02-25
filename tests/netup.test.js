@@ -150,7 +150,7 @@ describe('tradup', function () {
 
                 it('新增', function () {
                     var dataToAdd = {
-                        "code": "12345",
+                        "code": "123456",
                         "name": "foo",
                         "desc": "this is foo specification",
                         "constructure": "a kind of constructure",
