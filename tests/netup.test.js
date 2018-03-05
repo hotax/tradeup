@@ -1,6 +1,5 @@
 /**
  * Created by clx on 2017/10/9.
- * rename git repository name
  */
 var proxyquire = require('proxyquire'),
     path = require('path'),
